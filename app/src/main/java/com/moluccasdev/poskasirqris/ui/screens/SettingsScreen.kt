@@ -645,9 +645,65 @@ fun QrisAddDialog(
     settingsVM: SettingsViewModel,
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
     var name by remember { mutableStateOf("") }
     var qrisString by remember { mutableStateOf("") }
     var isDefault by remember { mutableStateOf(false) }
+
+    var showCameraScanner by remember { mutableStateOf(false) }
+
+    // Gallery Picker launcher for QR images
+    val qrPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            try {
+                val resolver = context.contentResolver
+                val inputStream = resolver.openInputStream(uri)
+                val bitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
+                if (bitmap != null) {
+                    val decoded = com.moluccasdev.poskasirqris.util.QrCodeGenerator.decodeQrCode(bitmap)
+                    if (decoded != null && decoded.isNotBlank()) {
+                        qrisString = decoded
+                        val detected = QrisEngine.extractMerchantName(decoded)
+                        name = detected
+                        Toast.makeText(context, "QRIS berhasil diimpor!", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, "Tidak dapat menemukan kode QR di gambar ini.", Toast.LENGTH_LONG).show()
+                    }
+                } else {
+                    Toast.makeText(context, "Gagal memuat gambar.", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Toast.makeText(context, "Gagal memproses gambar: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    // Camera permission request launcher
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            showCameraScanner = true
+        } else {
+            Toast.makeText(context, "Izin kamera ditolak. Tidak dapat menggunakan scanner.", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    if (showCameraScanner) {
+        CameraQrScannerDialog(
+            onScan = { decoded ->
+                qrisString = decoded
+                val detected = QrisEngine.extractMerchantName(decoded)
+                name = detected
+                showCameraScanner = false
+                Toast.makeText(context, "QRIS berhasil dipindai!", Toast.LENGTH_SHORT).show()
+            },
+            onDismiss = { showCameraScanner = false }
+        )
+    }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -658,7 +714,9 @@ fun QrisAddDialog(
             color = MaterialTheme.colorScheme.surface
         ) {
             Column(
-                modifier = Modifier.padding(24.dp),
+                modifier = Modifier
+                    .padding(24.dp)
+                    .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
@@ -668,10 +726,57 @@ fun QrisAddDialog(
                     fontWeight = FontWeight.Bold
                 )
 
+                // Row for Scan / Import Buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            val permission = android.Manifest.permission.CAMERA
+                            val isGranted = androidx.core.content.ContextCompat.checkSelfPermission(
+                                context, permission
+                            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                            if (isGranted) {
+                                showCameraScanner = true
+                            } else {
+                                cameraPermissionLauncher.launch(permission)
+                            }
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        ),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh, // Placeholder for camera icon
+                            contentDescription = "Kamera Scanner"
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Pindai Kamera", style = MaterialTheme.typography.labelSmall)
+                    }
+
+                    Button(
+                        onClick = { qrPickerLauncher.launch("image/*") },
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        ),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Impor Gambar", style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
                 OutlinedTextField(
                     value = qrisString,
                     onValueChange = { qrisString = it },
-                    label = { Text("Paste Raw QRIS String") },
+                    label = { Text("Paste/Hasil Scan QRIS String") },
                     shape = RoundedCornerShape(8.dp),
                     modifier = Modifier.fillMaxWidth(),
                     placeholder = { Text("000201010211...", style = MaterialTheme.typography.labelSmall) }
@@ -757,6 +862,134 @@ fun QrisAddDialog(
             }
         }
     }
+}
+
+@Composable
+fun CameraQrScannerDialog(
+    onScan: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier
+                .width(360.dp)
+                .height(480.dp)
+                .padding(8.dp),
+            color = Color.Black
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                CameraQrPreview(onScan = onScan)
+
+                // Overlay UI elements (e.g. Cancel button)
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.SpaceBetween,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Arahkan Kamera ke Kode QRIS",
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
+                            .padding(8.dp)
+                    )
+
+                    // Target scanning box preview border
+                    Box(
+                        modifier = Modifier
+                            .size(200.dp)
+                            .border(2.dp, Color.Green, RoundedCornerShape(12.dp))
+                    )
+
+                    Button(
+                        onClick = onDismiss,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.Red.copy(alpha = 0.8f),
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Batal")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
+@Composable
+fun CameraQrPreview(onScan: (String) -> Unit) {
+    val context = LocalContext.current
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+
+    val previewView = remember { androidx.camera.view.PreviewView(context) }
+
+    androidx.compose.runtime.LaunchedEffect(previewView) {
+        val cameraProviderFuture = androidx.camera.lifecycle.ProcessCameraProvider.getInstance(context)
+        cameraProviderFuture.addListener({
+            val cameraProvider = cameraProviderFuture.get()
+
+            val preview = androidx.camera.core.Preview.Builder().build().also {
+                it.setSurfaceProvider(previewView.surfaceProvider)
+            }
+
+            val imageAnalysis = androidx.camera.core.ImageAnalysis.Builder()
+                .setBackpressureStrategy(androidx.camera.core.ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                .build()
+
+            // Setup ZXing real-time scan analyzer
+            imageAnalysis.setAnalyzer(
+                androidx.core.content.ContextCompat.getMainExecutor(context)
+            ) { imageProxy ->
+                val mediaImage = imageProxy.image
+                if (mediaImage != null) {
+                    try {
+                        val rotationDegrees = imageProxy.imageInfo.rotationDegrees
+                        // Convert ImageProxy to bitmap for decoding
+                        val bitmap = previewView.bitmap
+                        if (bitmap != null) {
+                            val decoded = com.moluccasdev.poskasirqris.util.QrCodeGenerator.decodeQrCode(bitmap)
+                            if (decoded != null && decoded.isNotBlank()) {
+                                onScan(decoded)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    } finally {
+                        imageProxy.close()
+                    }
+                } else {
+                    imageProxy.close()
+                }
+            }
+
+            val cameraSelector = androidx.camera.core.CameraSelector.DEFAULT_BACK_CAMERA
+
+            try {
+                cameraProvider.unbindAll()
+                cameraProvider.bindToLifecycle(
+                    lifecycleOwner,
+                    cameraSelector,
+                    preview,
+                    imageAnalysis
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }, androidx.core.content.ContextCompat.getMainExecutor(context))
+    }
+
+    androidx.compose.ui.viewinterop.AndroidView(
+        factory = { previewView },
+        modifier = Modifier.fillMaxSize()
+    )
 }
 
 // 3. CONFIG & BACKUP TAB WORKSPACE
