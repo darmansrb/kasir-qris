@@ -113,7 +113,7 @@ fun OrderScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 16.dp, vertical = 8.dp) // tighter padding to lift it up
+                .padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 8.dp) // Removed top padding to lift title
         ) {
             // Screen Header Title
             Text(
@@ -134,7 +134,7 @@ fun OrderScreen(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                placeholder = { Text("Cari pesanan berdasarkan nama / kursi...", style = MaterialTheme.typography.bodyMedium) },
+                placeholder = { Text("Cari pesanan nama / kursi...", style = MaterialTheme.typography.bodyMedium) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Cari") },
                 shape = RoundedCornerShape(8.dp),
                 modifier = Modifier.fillMaxWidth(),
