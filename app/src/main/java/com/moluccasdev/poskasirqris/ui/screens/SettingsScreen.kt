@@ -618,13 +618,13 @@ fun QrisSettingsTab(
                             ) {
                                 Icon(Icons.Default.Star, contentDescription = "Jadikan Utama", tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(20.dp))
                             }
-                            
-                            IconButton(
-                                onClick = { settingsVM.deleteQris(qris) },
-                                modifier = Modifier.size(36.dp)
-                            ) {
-                                Icon(Icons.Default.Delete, contentDescription = "Hapus", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
-                            }
+                        }
+
+                        IconButton(
+                            onClick = { settingsVM.deleteQris(qris) },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = "Hapus", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
                         }
                     }
                 }
@@ -807,7 +807,8 @@ fun QrisAddDialog(
                     label = { Text("Nama Merchant / Toko") },
                     shape = RoundedCornerShape(8.dp),
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
+                    readOnly = true
                 )
 
                 Row(
