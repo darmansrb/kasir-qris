@@ -31,6 +31,8 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -85,9 +87,38 @@ fun OrderScreen(
 ) {
     val drafts by orderVM.draftOrders.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
+
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var orderToDelete by remember { mutableStateOf<OrderEntity?>(null) }
     
     val filteredDrafts = drafts.filter {
         it.order.customerNameOrTable.contains(searchQuery, ignoreCase = true)
+    }
+
+    if (showDeleteDialog && orderToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Konfirmasi Hapus", fontWeight = FontWeight.Bold) },
+            text = { Text("Apakah Anda yakin ingin menghapus pesanan '${orderToDelete?.customerNameOrTable}'? Tindakan ini tidak dapat dibatalkan.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        orderToDelete?.let { orderVM.deleteDraft(it) }
+                        showDeleteDialog = false
+                        orderToDelete = null
+                    }
+                ) {
+                    Text("Hapus", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Batal")
+                }
+            },
+            shape = RoundedCornerShape(12.dp),
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     }
 
     Scaffold(
@@ -178,7 +209,10 @@ fun OrderScreen(
                                 orderVM.selectDraft(draft.order)
                                 onEditOrderClick()
                             },
-                            onDelete = { orderVM.deleteDraft(draft.order) }
+                            onDelete = { 
+                                orderToDelete = draft.order
+                                showDeleteDialog = true
+                            }
                         )
                     }
                 }
@@ -219,16 +253,38 @@ fun DraftOrderRowItem(
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
-                Spacer(modifier = Modifier.height(2.dp))
+                
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Badge for total items
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(MaterialTheme.colorScheme.secondaryContainer)
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "${draft.totalItems} Item",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.width(8.dp))
+                    
+                    Text(
+                        text = "Rp ${String.format(Locale.getDefault(), "%,.0f", draft.totalPrice)}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "${draft.totalItems} pesanan • Rp ${String.format(Locale.getDefault(), "%,.0f", draft.totalPrice)}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = "Dibuat pada: ${dateFormatter.format(java.util.Date(draft.order.createdAt))}",
+                    text = "Dibuat: ${dateFormatter.format(java.util.Date(draft.order.createdAt))}",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.outline
                 )
@@ -236,20 +292,22 @@ fun DraftOrderRowItem(
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(0.dp) // even closer
             ) {
-                IconButton(onClick = onEdit) {
+                IconButton(onClick = onEdit, modifier = Modifier.size(40.dp)) {
                     Icon(
                         imageVector = Icons.Default.Edit,
                         contentDescription = "Edit Pesanan",
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
-                IconButton(onClick = onDelete) {
+                IconButton(onClick = onDelete, modifier = Modifier.size(40.dp)) {
                     Icon(
                         imageVector = Icons.Default.Delete,
                         contentDescription = "Hapus Pesanan",
-                        tint = MaterialTheme.colorScheme.error
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
