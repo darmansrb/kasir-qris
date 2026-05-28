@@ -36,6 +36,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
+import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -93,24 +94,45 @@ fun ReportScreen(reportVM: ReportViewModel) {
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
-    if (isLandscape) {
-        // Landscape Mode: Side-by-side Row
-        Row(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-            // Left Column: Filter and Summary Dashboard (Scrollable)
+    Scaffold(
+        topBar = {
             Column(
                 modifier = Modifier
-                    .weight(1.2f)
-                    .fillMaxHeight()
-                    .verticalScroll(rememberScrollState())
-                    .padding(end = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp)
             ) {
                 Text(
                     text = "Dashboard Laporan",
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
                 )
+                Text(
+                    text = "Katalog riwayat penjualan kasir lunas",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.outline
+                )
+            }
+        }
+    ) { innerPadding ->
+        if (isLandscape) {
+            // Landscape Mode: Side-by-side Row
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 16.dp)
+            ) {
+                // Left Column: Filter and Summary Dashboard (Scrollable)
+                Column(
+                    modifier = Modifier
+                        .weight(1.2f)
+                        .fillMaxHeight()
+                        .verticalScroll(rememberScrollState())
+                        .padding(end = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
 
                 // Date Preset Selectors
                 Card(
@@ -303,29 +325,15 @@ fun ReportScreen(reportVM: ReportViewModel) {
                 }
             }
         }
-    } else {
-        // Portrait Mode: Single Scrollable LazyColumn for optimal scrolling compatibility
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            item {
-                Column {
-                    Text(
-                        text = "Dashboard Laporan",
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "Katalog riwayat penjualan kasir lunas",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                }
-            }
+        } else {
+            // Portrait Mode: Single Scrollable LazyColumn for optimal scrolling compatibility
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
 
             // Filter Presets Card
             item {
@@ -512,6 +520,7 @@ fun ReportScreen(reportVM: ReportViewModel) {
             }
         }
     }
+}
 }
 
 private fun setTodayRange(reportVM: ReportViewModel) {

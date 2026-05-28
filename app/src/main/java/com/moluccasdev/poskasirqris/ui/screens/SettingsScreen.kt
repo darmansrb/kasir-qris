@@ -45,6 +45,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -65,6 +66,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Done
 import com.moluccasdev.poskasirqris.data.ProductEntity
 import com.moluccasdev.poskasirqris.data.QrisEntity
 import com.moluccasdev.poskasirqris.ui.SettingsViewModel
@@ -83,24 +87,45 @@ fun SettingsScreen(settingsVM: SettingsViewModel) {
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
-    if (isLandscape) {
-        // Landscape Mode: Side-by-side Row layout
-        Row(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-            // Left Column: Tab Selectors (Scrollable Column)
+    Scaffold(
+        topBar = {
             Column(
                 modifier = Modifier
-                    .weight(1.1f)
-                    .fillMaxHeight()
-                    .verticalScroll(rememberScrollState())
-                    .padding(end = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp)
             ) {
                 Text(
                     text = "Pengaturan",
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
                 )
+                Text(
+                    text = "Konfigurasi katalog barang, QRIS merchant & preferensi",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.outline
+                )
+            }
+        }
+    ) { innerPadding ->
+        if (isLandscape) {
+            // Landscape Mode: Side-by-side Row layout
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 16.dp)
+            ) {
+                // Left Column: Tab Selectors (Scrollable Column)
+                Column(
+                    modifier = Modifier
+                        .weight(1.1f)
+                        .fillMaxHeight()
+                        .verticalScroll(rememberScrollState())
+                        .padding(end = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
 
                 // Settings Tab items
                 SettingsTabSelectorItem(
@@ -136,26 +161,14 @@ fun SettingsScreen(settingsVM: SettingsViewModel) {
                 }
             }
         }
-    } else {
-        // Portrait Mode: Top Horizontal Scrollable Tabs & Remaining Space content frame
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)
-        ) {
-            Text(
-                text = "Pengaturan",
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "Konfigurasi katalog barang, QRIS merchant & preferensi",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.outline
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
+        } else {
+            // Portrait Mode: Top Horizontal Scrollable Tabs & Remaining Space content frame
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 16.dp)
+            ) {
 
             // Horizontal Tab Chips
             Row(
@@ -200,8 +213,9 @@ fun SettingsScreen(settingsVM: SettingsViewModel) {
                 }
             }
         }
+            }
+        }
     }
-}
 
 @Composable
 fun SettingsTabSelectorItem(
@@ -996,7 +1010,58 @@ fun CameraQrPreview(onScan: (String) -> Unit) {
 // 3. CONFIG & BACKUP TAB WORKSPACE
 @Composable
 fun ConfigSettingsTab(context: android.content.Context) {
-    var isPrinterActive by remember { mutableStateOf(false) }
+    val prefs = remember { context.getSharedPreferences("pos_settings", android.content.Context.MODE_PRIVATE) }
+    var isPrinterActive by remember { mutableStateOf(prefs.getBoolean("is_printer_active", false)) }
+
+    var showPermissionAlert by remember { mutableStateOf(false) }
+
+    val bluetoothPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val isConnectGranted = permissions[android.Manifest.permission.BLUETOOTH_CONNECT] ?: false
+        val isScanGranted = permissions[android.Manifest.permission.BLUETOOTH_SCAN] ?: false
+        if (isConnectGranted && isScanGranted) {
+            isPrinterActive = true
+            prefs.edit().putBoolean("is_printer_active", true).apply()
+            Toast.makeText(context, "Printer aktif dengan izin Bluetooth!", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(context, "Izin Bluetooth ditolak. Printer tidak dapat diaktifkan!", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    if (showPermissionAlert) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showPermissionAlert = false },
+            title = { Text("Izin Bluetooth Diperlukan", fontWeight = FontWeight.Bold) },
+            text = { Text("Aplikasi membutuhkan izin Bluetooth Connect dan Bluetooth Scan untuk mencari, menghubungkan, dan mencetak ke printer thermal Bluetooth Anda.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showPermissionAlert = false
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                            bluetoothPermissionLauncher.launch(
+                                arrayOf(
+                                    android.Manifest.permission.BLUETOOTH_CONNECT,
+                                    android.Manifest.permission.BLUETOOTH_SCAN
+                                )
+                            )
+                        } else {
+                            // On older versions, Bluetooth permissions are declared in manifest and granted at install time
+                            isPrinterActive = true
+                            prefs.edit().putBoolean("is_printer_active", true).apply()
+                        }
+                    }
+                ) {
+                    Text("Izinkan")
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showPermissionAlert = false }) {
+                    Text("Batal")
+                }
+            }
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -1018,9 +1083,9 @@ fun ConfigSettingsTab(context: android.content.Context) {
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                     modifier = Modifier.fillMaxWidth(),
+                     horizontalArrangement = Arrangement.SpaceBetween,
+                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
                         Text("Printer Bluetooth Thermal", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
@@ -1033,7 +1098,29 @@ fun ConfigSettingsTab(context: android.content.Context) {
                             .height(28.dp)
                             .clip(CircleShape)
                             .background(if (isPrinterActive) Color(0xFF2E7D32) else Color.LightGray)
-                            .clickable { isPrinterActive = !isPrinterActive }
+                            .clickable {
+                                if (!isPrinterActive) {
+                                    // Check permission first when turning ON
+                                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                                        val connectPerm = android.Manifest.permission.BLUETOOTH_CONNECT
+                                        val scanPerm = android.Manifest.permission.BLUETOOTH_SCAN
+                                        val isConnectGranted = androidx.core.content.ContextCompat.checkSelfPermission(context, connectPerm) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                                        val isScanGranted = androidx.core.content.ContextCompat.checkSelfPermission(context, scanPerm) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                                        if (!isConnectGranted || !isScanGranted) {
+                                            showPermissionAlert = true
+                                        } else {
+                                            isPrinterActive = true
+                                            prefs.edit().putBoolean("is_printer_active", true).apply()
+                                        }
+                                    } else {
+                                        isPrinterActive = true
+                                        prefs.edit().putBoolean("is_printer_active", true).apply()
+                                    }
+                                } else {
+                                    isPrinterActive = false
+                                    prefs.edit().putBoolean("is_printer_active", false).apply()
+                                }
+                            }
                             .padding(2.dp),
                         contentAlignment = if (isPrinterActive) Alignment.CenterEnd else Alignment.CenterStart
                     ) {
@@ -1043,6 +1130,166 @@ fun ConfigSettingsTab(context: android.content.Context) {
                                 .clip(CircleShape)
                                 .background(Color.White)
                         )
+                    }
+                }
+
+                if (isPrinterActive) {
+                    var selectedPrinterAddress by remember { mutableStateOf(prefs.getString("selected_printer_address", "") ?: "") }
+                    var showPrinterDropdown by remember { mutableStateOf(false) }
+
+                    val pairedPrinters = remember {
+                        try {
+                            com.dantsu.escposprinter.connection.bluetooth.BluetoothPrintersConnections().list?.toList() ?: emptyList()
+                        } catch (e: Exception) {
+                            emptyList()
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    HorizontalDivider(color = Color.LightGray.copy(alpha = 0.3f), thickness = 0.5.dp)
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        text = "Pilih Printer Bluetooth:",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    val currentPrinterName = pairedPrinters.find { it.device.address == selectedPrinterAddress }?.device?.name
+                        ?: if (selectedPrinterAddress.isNotEmpty()) "Printer Terputus ($selectedPrinterAddress)" else "Belum Memilih Printer (Tap Pilih)"
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
+                            .clickable { showPrinterDropdown = !showPrinterDropdown }
+                            .padding(horizontal = 12.dp, vertical = 10.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = currentPrinterName,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Icon(
+                                imageVector = if (showPrinterDropdown) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                contentDescription = "Pilih Printer",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+
+                    if (showPrinterDropdown) {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 4.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                        ) {
+                            Column(modifier = Modifier.padding(4.dp)) {
+                                if (pairedPrinters.isEmpty()) {
+                                    Text(
+                                        text = "Tidak ada printer Bluetooth dipasang. Hubungkan dulu di Pengaturan Bluetooth HP.",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.padding(8.dp)
+                                    )
+                                } else {
+                                    pairedPrinters.forEach { printer ->
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    selectedPrinterAddress = printer.device.address
+                                                    prefs.edit().putString("selected_printer_address", printer.device.address).apply()
+                                                    showPrinterDropdown = false
+                                                }
+                                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column {
+                                                Text(
+                                                    text = printer.device.name ?: "Unknown Printer",
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                                Text(
+                                                    text = printer.device.address,
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.outline
+                                                )
+                                            }
+                                            if (selectedPrinterAddress == printer.device.address) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Done,
+                                                    contentDescription = "Terpilih",
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                        }
+                                        HorizontalDivider(color = Color.LightGray.copy(alpha = 0.3f), thickness = 0.5.dp)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Button(
+                        onClick = {
+                            // Run Dummy Print Test
+                            try {
+                                val bluetoothPrinters = com.dantsu.escposprinter.connection.bluetooth.BluetoothPrintersConnections().list
+                                val bluetoothConnection = if (selectedPrinterAddress.isNotEmpty() && bluetoothPrinters != null) {
+                                    bluetoothPrinters.find { it.device.address == selectedPrinterAddress }
+                                        ?: com.dantsu.escposprinter.connection.bluetooth.BluetoothPrintersConnections.selectFirstPaired()
+                                } else {
+                                    com.dantsu.escposprinter.connection.bluetooth.BluetoothPrintersConnections.selectFirstPaired()
+                                }
+
+                                if (bluetoothConnection == null) {
+                                    Toast.makeText(context, "Printer Bluetooth tidak terhubung / terpasang!", Toast.LENGTH_LONG).show()
+                                } else {
+                                    val printer = com.dantsu.escposprinter.EscPosPrinter(bluetoothConnection, 203, 48f, 32)
+                                    val textToPrint = StringBuilder()
+                                    textToPrint.append("[C]<b><font size='big'>TEST PRINT DUMMY</font></b>\n")
+                                    textToPrint.append("[C]Printer Thermal Bluetooth Berhasil\n")
+                                    textToPrint.append("[C]================================\n")
+                                    textToPrint.append("[L]Tgl Test : ${java.text.SimpleDateFormat("dd MMM yyyy, HH:mm", java.util.Locale.getDefault()).format(java.util.Date())}\n")
+                                    textToPrint.append("[L]Printer  : ${bluetoothConnection.device.name ?: "Unknown"}\n")
+                                    textToPrint.append("[L]Alamat   : ${bluetoothConnection.device.address}\n")
+                                    textToPrint.append("[C]--------------------------------\n")
+                                    textToPrint.append("[C]Koneksi printer thermal berjalan!\n")
+                                    textToPrint.append("[C]POS KASIR QRIS OFFLINE\n\n\n")
+
+                                    printer.printFormattedText(textToPrint.toString())
+                                    Toast.makeText(context, "Test print berhasil dikirim ke printer!", Toast.LENGTH_SHORT).show()
+                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                                Toast.makeText(context, "Gagal print: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                            }
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(imageVector = Icons.Default.Refresh, contentDescription = "Test Print")
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("TEST PRINT STRUK (DUMMY)", style = MaterialTheme.typography.labelMedium)
                     }
                 }
             }

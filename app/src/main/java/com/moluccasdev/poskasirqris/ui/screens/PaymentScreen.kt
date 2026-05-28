@@ -2,6 +2,8 @@ package com.moluccasdev.poskasirqris.ui.screens
 
 import android.graphics.Bitmap
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -29,6 +31,8 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -71,8 +75,33 @@ fun PaymentScreen(
     onNavigateBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val currentOrderName = orderVM.currentCustomerName.ifBlank { "Pesanan Draft" }
+    val currentOrderName = orderVM.currentCustomerName.ifBlank { "Umum" }
     val orderId = orderVM.currentOrderId
+
+    val prefs = remember { context.getSharedPreferences("pos_settings", android.content.Context.MODE_PRIVATE) }
+    var selectedPrinterAddress by remember { mutableStateOf(prefs.getString("selected_printer_address", "") ?: "") }
+    var showPrinterDropdown by remember { mutableStateOf(false) }
+
+    val pairedPrinters = remember {
+        try {
+            com.dantsu.escposprinter.connection.bluetooth.BluetoothPrintersConnections().list?.toList() ?: emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    val bluetoothPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val isConnectGranted = permissions[android.Manifest.permission.BLUETOOTH_CONNECT] ?: false
+        val isScanGranted = permissions[android.Manifest.permission.BLUETOOTH_SCAN] ?: false
+        if (isConnectGranted && isScanGranted) {
+            val draftDate = orderVM.draftOrders.value.find { it.order.id == orderId }?.order?.createdAt ?: System.currentTimeMillis()
+            printReceipt(context, orderVM, calcVM, draftDate, selectedPrinterAddress)
+        } else {
+            Toast.makeText(context, "Izin Bluetooth ditolak. Tidak dapat mencetak struk!", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     // Prepare checkout total directly from order total computed from database items list
     val totalAmount = orderVM.cartTotal
@@ -89,16 +118,21 @@ fun PaymentScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(start = 4.dp, end = 16.dp, top = 12.dp, bottom = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onNavigateBack) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "Kembali",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
                 }
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = "Detail Pesanan & Pembayaran",
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
                 )
@@ -274,6 +308,116 @@ fun PaymentScreen(
                         }
                     }
 
+                    // Printer Selector (shown only if printer is active in settings)
+                    val isPrinterActive = remember { prefs.getBoolean("is_printer_active", false) }
+                    if (isPrinterActive) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "Printer Bluetooth Terpilih:",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.outline,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            
+                            val currentPrinterName = pairedPrinters.find { it.device.address == selectedPrinterAddress }?.device?.name 
+                                ?: if (selectedPrinterAddress.isNotEmpty()) "Printer Terputus ($selectedPrinterAddress)" else "Belum Memilih Printer (Tap Pilih)"
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(MaterialTheme.colorScheme.surface)
+                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
+                                    .clickable { showPrinterDropdown = !showPrinterDropdown }
+                                    .padding(horizontal = 12.dp, vertical = 10.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = currentPrinterName,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Icon(
+                                        imageVector = if (showPrinterDropdown) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                        contentDescription = "Pilih Printer",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+
+                            if (showPrinterDropdown) {
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 4.dp),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                                ) {
+                                    Column(modifier = Modifier.padding(4.dp)) {
+                                        if (pairedPrinters.isEmpty()) {
+                                            Text(
+                                                text = "Tidak ada printer Bluetooth dipasang. Hubungkan dulu di Pengaturan Bluetooth HP.",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.error,
+                                                modifier = Modifier.padding(8.dp)
+                                            )
+                                        } else {
+                                            pairedPrinters.forEach { printer ->
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .clickable {
+                                                            selectedPrinterAddress = printer.device.address
+                                                            prefs.edit().putString("selected_printer_address", printer.device.address).apply()
+                                                            showPrinterDropdown = false
+                                                        }
+                                                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Column {
+                                                        Text(
+                                                            text = printer.device.name ?: "Unknown Printer",
+                                                            style = MaterialTheme.typography.bodyMedium,
+                                                            fontWeight = FontWeight.Bold
+                                                        )
+                                                        Text(
+                                                            text = printer.device.address,
+                                                            style = MaterialTheme.typography.labelSmall,
+                                                            color = MaterialTheme.colorScheme.outline
+                                                        )
+                                                    }
+                                                    if (selectedPrinterAddress == printer.device.address) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.Done,
+                                                            contentDescription = "Terpilih",
+                                                            tint = MaterialTheme.colorScheme.primary,
+                                                            modifier = Modifier.size(16.dp)
+                                                        )
+                                                    }
+                                                }
+                                                HorizontalDivider(color = Color.LightGray.copy(alpha = 0.3f), thickness = 0.5.dp)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
                     // Pay & Checkout Action Validation
                     val cashAmount = calcVM.cashPaidAmount.toDoubleOrNull() ?: 0.0
                     val isCashValid = calcVM.currentPaymentMethod == "CASH" && cashAmount >= totalAmount
@@ -281,6 +425,25 @@ fun PaymentScreen(
 
                     Button(
                         onClick = {
+                            val draftDate = orderVM.draftOrders.value.find { it.order.id == orderId }?.order?.createdAt ?: System.currentTimeMillis()
+                            val prefs = context.getSharedPreferences("pos_settings", android.content.Context.MODE_PRIVATE)
+                            val isPrinterActive = prefs.getBoolean("is_printer_active", false)
+                            if (isPrinterActive) {
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                                    val connectPerm = android.Manifest.permission.BLUETOOTH_CONNECT
+                                    val scanPerm = android.Manifest.permission.BLUETOOTH_SCAN
+                                    val isConnectGranted = androidx.core.content.ContextCompat.checkSelfPermission(context, connectPerm) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                                    val isScanGranted = androidx.core.content.ContextCompat.checkSelfPermission(context, scanPerm) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                                    if (!isConnectGranted || !isScanGranted) {
+                                        bluetoothPermissionLauncher.launch(arrayOf(connectPerm, scanPerm))
+                                    } else {
+                                        printReceipt(context, orderVM, calcVM, draftDate, selectedPrinterAddress)
+                                    }
+                                } else {
+                                    printReceipt(context, orderVM, calcVM, draftDate, selectedPrinterAddress)
+                                }
+                            }
+
                             calcVM.checkout(orderId) {
                                 Toast.makeText(context, "Pembayaran Berhasil Diselesaikan!", Toast.LENGTH_LONG).show()
                                 orderVM.clearCart()
@@ -464,6 +627,116 @@ fun PaymentScreen(
                         }
                     }
 
+                    // Printer Selector (shown only if printer is active in settings) - Portrait
+                    val isPrinterActive = remember { prefs.getBoolean("is_printer_active", false) }
+                    if (isPrinterActive) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "Printer Bluetooth Terpilih:",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.outline,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            
+                            val currentPrinterName = pairedPrinters.find { it.device.address == selectedPrinterAddress }?.device?.name 
+                                ?: if (selectedPrinterAddress.isNotEmpty()) "Printer Terputus ($selectedPrinterAddress)" else "Belum Memilih Printer (Tap Pilih)"
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(MaterialTheme.colorScheme.surface)
+                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
+                                    .clickable { showPrinterDropdown = !showPrinterDropdown }
+                                    .padding(horizontal = 12.dp, vertical = 10.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = currentPrinterName,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Icon(
+                                        imageVector = if (showPrinterDropdown) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                        contentDescription = "Pilih Printer",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+
+                            if (showPrinterDropdown) {
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 4.dp),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                                ) {
+                                    Column(modifier = Modifier.padding(4.dp)) {
+                                        if (pairedPrinters.isEmpty()) {
+                                            Text(
+                                                text = "Tidak ada printer Bluetooth dipasang. Hubungkan dulu di Pengaturan Bluetooth HP.",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.error,
+                                                modifier = Modifier.padding(8.dp)
+                                            )
+                                        } else {
+                                            pairedPrinters.forEach { printer ->
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .clickable {
+                                                            selectedPrinterAddress = printer.device.address
+                                                            prefs.edit().putString("selected_printer_address", printer.device.address).apply()
+                                                            showPrinterDropdown = false
+                                                        }
+                                                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Column {
+                                                        Text(
+                                                            text = printer.device.name ?: "Unknown Printer",
+                                                            style = MaterialTheme.typography.bodyMedium,
+                                                            fontWeight = FontWeight.Bold
+                                                        )
+                                                        Text(
+                                                            text = printer.device.address,
+                                                            style = MaterialTheme.typography.labelSmall,
+                                                            color = MaterialTheme.colorScheme.outline
+                                                        )
+                                                    }
+                                                    if (selectedPrinterAddress == printer.device.address) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.Done,
+                                                            contentDescription = "Terpilih",
+                                                            tint = MaterialTheme.colorScheme.primary,
+                                                            modifier = Modifier.size(16.dp)
+                                                        )
+                                                    }
+                                                }
+                                                HorizontalDivider(color = Color.LightGray.copy(alpha = 0.3f), thickness = 0.5.dp)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
                     // Pay & Checkout Action
                     val cashAmount = calcVM.cashPaidAmount.toDoubleOrNull() ?: 0.0
                     val isCashValid = calcVM.currentPaymentMethod == "CASH" && cashAmount >= totalAmount
@@ -471,6 +744,25 @@ fun PaymentScreen(
 
                     Button(
                         onClick = {
+                            val draftDate = orderVM.draftOrders.value.find { it.order.id == orderId }?.order?.createdAt ?: System.currentTimeMillis()
+                            val prefs = context.getSharedPreferences("pos_settings", android.content.Context.MODE_PRIVATE)
+                            val isPrinterActive = prefs.getBoolean("is_printer_active", false)
+                            if (isPrinterActive) {
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                                    val connectPerm = android.Manifest.permission.BLUETOOTH_CONNECT
+                                    val scanPerm = android.Manifest.permission.BLUETOOTH_SCAN
+                                    val isConnectGranted = androidx.core.content.ContextCompat.checkSelfPermission(context, connectPerm) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                                    val isScanGranted = androidx.core.content.ContextCompat.checkSelfPermission(context, scanPerm) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                                    if (!isConnectGranted || !isScanGranted) {
+                                        bluetoothPermissionLauncher.launch(arrayOf(connectPerm, scanPerm))
+                                    } else {
+                                        printReceipt(context, orderVM, calcVM, draftDate, selectedPrinterAddress)
+                                    }
+                                } else {
+                                    printReceipt(context, orderVM, calcVM, draftDate, selectedPrinterAddress)
+                                }
+                            }
+
                             calcVM.checkout(orderId) {
                                 Toast.makeText(context, "Pembayaran Berhasil Diselesaikan!", Toast.LENGTH_LONG).show()
                                 orderVM.clearCart()
@@ -499,6 +791,54 @@ fun PaymentScreen(
     }
 }
 
+class RupiahVisualTransformation : androidx.compose.ui.text.input.VisualTransformation {
+    override fun filter(text: androidx.compose.ui.text.AnnotatedString): androidx.compose.ui.text.input.TransformedText {
+        val originalText = text.text
+        if (originalText.isEmpty()) {
+            return androidx.compose.ui.text.input.TransformedText(text, androidx.compose.ui.text.input.OffsetMapping.Identity)
+        }
+
+        val formatted = try {
+            val number = originalText.toLong()
+            java.text.NumberFormat.getNumberInstance(java.util.Locale("in", "ID")).format(number)
+        } catch (e: Exception) {
+            originalText
+        }
+
+        val offsetMapping = object : androidx.compose.ui.text.input.OffsetMapping {
+            override fun originalToTransformed(offset: Int): Int {
+                if (offset <= 0) return 0
+                var transformedOffset = 0
+                var originalCount = 0
+                for (i in 0 until formatted.length) {
+                    if (formatted[i].isDigit()) {
+                        originalCount++
+                    }
+                    transformedOffset++
+                    if (originalCount == offset) {
+                        break
+                    }
+                }
+                return transformedOffset
+            }
+
+            override fun transformedToOriginal(offset: Int): Int {
+                if (offset <= 0) return 0
+                val clampedOffset = offset.coerceAtMost(formatted.length)
+                var originalOffset = 0
+                for (i in 0 until clampedOffset) {
+                    if (formatted[i].isDigit()) {
+                        originalOffset++
+                    }
+                }
+                return originalOffset
+            }
+        }
+
+        return androidx.compose.ui.text.input.TransformedText(androidx.compose.ui.text.AnnotatedString(formatted), offsetMapping)
+    }
+}
+
 @Composable
 fun CashPaymentPanel(calcVM: CalculatorViewModel, totalAmount: Double) {
     val quickAmounts = listOf("10000", "20000", "50000", "100000")
@@ -508,8 +848,13 @@ fun CashPaymentPanel(calcVM: CalculatorViewModel, totalAmount: Double) {
     Column(modifier = Modifier.fillMaxWidth()) {
         OutlinedTextField(
             value = calcVM.cashPaidAmount,
-            onValueChange = { calcVM.cashPaidAmount = it },
+            onValueChange = { newVal ->
+                val filtered = newVal.filter { it.isDigit() }
+                calcVM.cashPaidAmount = filtered
+            },
             label = { Text("Jumlah Uang Diterima", style = MaterialTheme.typography.labelSmall) },
+            prefix = { Text("Rp ", style = MaterialTheme.typography.bodyMedium) },
+            visualTransformation = remember { RupiahVisualTransformation() },
             shape = RoundedCornerShape(8.dp),
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
@@ -748,6 +1093,84 @@ fun QrisQrCodeModal(
                 }
             }
         }
+    }
+}
+
+fun printReceipt(
+    context: android.content.Context,
+    orderVM: OrderViewModel,
+    calcVM: CalculatorViewModel,
+    orderDate: Long,
+    selectedPrinterAddress: String
+) {
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+        val connectPerm = android.Manifest.permission.BLUETOOTH_CONNECT
+        val scanPerm = android.Manifest.permission.BLUETOOTH_SCAN
+        val isConnectGranted = androidx.core.content.ContextCompat.checkSelfPermission(context, connectPerm) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        val isScanGranted = androidx.core.content.ContextCompat.checkSelfPermission(context, scanPerm) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (!isConnectGranted || !isScanGranted) {
+            android.widget.Toast.makeText(context, "Izin Bluetooth dibutuhkan untuk mencetak struk!", android.widget.Toast.LENGTH_LONG).show()
+            return
+        }
+    }
+
+    try {
+        val bluetoothPrinters = com.dantsu.escposprinter.connection.bluetooth.BluetoothPrintersConnections().list
+        val bluetoothConnection = if (selectedPrinterAddress.isNotEmpty() && bluetoothPrinters != null) {
+            bluetoothPrinters.find { it.device.address == selectedPrinterAddress }
+                ?: com.dantsu.escposprinter.connection.bluetooth.BluetoothPrintersConnections.selectFirstPaired()
+        } else {
+            com.dantsu.escposprinter.connection.bluetooth.BluetoothPrintersConnections.selectFirstPaired()
+        }
+
+        if (bluetoothConnection == null) {
+            android.widget.Toast.makeText(context, "Printer Bluetooth tidak terhubung / terpasang!", android.widget.Toast.LENGTH_LONG).show()
+            return
+        }
+
+        val printer = com.dantsu.escposprinter.EscPosPrinter(bluetoothConnection, 203, 48f, 32)
+
+        val dateFormatter = java.text.SimpleDateFormat("dd MMM yyyy, HH:mm", java.util.Locale.getDefault())
+        val formattedOrderDate = dateFormatter.format(java.util.Date(orderDate))
+        val formattedPrintDate = dateFormatter.format(java.util.Date())
+
+        val cashAmount = calcVM.cashPaidAmount.toDoubleOrNull() ?: 0.0
+        val totalAmount = orderVM.cartTotal
+        val changeAmount = (cashAmount - totalAmount).coerceAtLeast(0.0)
+
+        val textToPrint = StringBuilder()
+        textToPrint.append("[C]<b><font size='big'>POS KASIR QRIS</font></b>\n")
+        textToPrint.append("[C]Bukti Pembayaran Transaksi\n")
+        textToPrint.append("[C]================================\n")
+        textToPrint.append("[L]Tgl Pesan : $formattedOrderDate\n")
+        textToPrint.append("[L]Tgl Cetak : $formattedPrintDate\n")
+        textToPrint.append("[L]Pelanggan : ${orderVM.currentCustomerName.ifBlank { "Umum" }}\n")
+        textToPrint.append("[L]Bayar     : ${calcVM.currentPaymentMethod}\n")
+        textToPrint.append("[C]--------------------------------\n")
+
+        orderVM.cart.forEach { item ->
+            val subtotal = item.product.price * item.qty
+            textToPrint.append("[L]${item.product.name}\n")
+            textToPrint.append("[L]  ${item.qty} x Rp ${String.format(java.util.Locale.getDefault(), "%,.0f", item.product.price)}[R]Rp ${String.format(java.util.Locale.getDefault(), "%,.0f", subtotal)}\n")
+        }
+
+        textToPrint.append("[C]--------------------------------\n")
+        textToPrint.append("[L]<b>TOTAL[R]Rp ${String.format(java.util.Locale.getDefault(), "%,.0f", totalAmount)}</b>\n")
+
+        if (calcVM.currentPaymentMethod == "CASH") {
+            textToPrint.append("[L]TUNAI[R]Rp ${String.format(java.util.Locale.getDefault(), "%,.0f", cashAmount)}\n")
+            textToPrint.append("[L]KEMBALIAN[R]Rp ${String.format(java.util.Locale.getDefault(), "%,.0f", changeAmount)}\n")
+        }
+
+        textToPrint.append("[C]================================\n")
+        textToPrint.append("[C]Terima Kasih atas\n")
+        textToPrint.append("[C]Kunjungan Anda!\n")
+        textToPrint.append("[C]Layanan POS Kasir QRIS Offline\n\n\n")
+
+        printer.printFormattedText(textToPrint.toString())
+    } catch (e: Exception) {
+        e.printStackTrace()
+        android.widget.Toast.makeText(context, "Error printer: ${e.localizedMessage}", android.widget.Toast.LENGTH_LONG).show()
     }
 }
 

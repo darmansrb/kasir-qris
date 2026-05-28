@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -122,6 +123,27 @@ fun OrderScreen(
     }
 
     Scaffold(
+        topBar = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp)
+            ) {
+                // Screen Header Title
+                Text(
+                    text = "Daftar Pesanan Berjalan",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Katalog draft pesanan kasir aktif (belum lunas)",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.outline
+                )
+            }
+        },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
@@ -144,22 +166,8 @@ fun OrderScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 8.dp) // Removed top padding to lift title
+                .padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 8.dp)
         ) {
-            // Screen Header Title
-            Text(
-                text = "Daftar Pesanan Berjalan",
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "Katalog draft pesanan kasir aktif (belum lunas)",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.outline
-            )
-
-            Spacer(modifier = Modifier.height(8.dp)) // raised list by making spacers smaller
 
             // Search filter for draft orders
             OutlinedTextField(
@@ -339,34 +347,43 @@ fun CreateOrderScreen(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
-    Scaffold { innerPadding ->
+    Scaffold(
+        topBar = {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(start = 4.dp, end = 16.dp, top = 12.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = {
+                        orderVM.clearCart()
+                        onNavigateBack()
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "Kembali",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = if (orderVM.currentOrderId == 0L) "Buat Pesanan Baru" else "Edit Detail Pesanan",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            // Header Row
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = {
-                    orderVM.clearCart()
-                    onNavigateBack()
-                }) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = if (orderVM.currentOrderId == 0L) "Buat Pesanan Baru" else "Edit Detail Pesanan",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
-                )
-            }
 
             // Product search bar (sm corner radius)
             OutlinedTextField(
@@ -438,15 +455,16 @@ fun CreateOrderScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(modifier = Modifier.weight(2f)) {
+                    Column(modifier = Modifier.weight(1f)) { // Widen input
                         OutlinedTextField(
                             value = orderVM.currentCustomerName,
                             onValueChange = { orderVM.currentCustomerName = it },
-                            placeholder = { Text("Nama Pelanggan/Meja", style = MaterialTheme.typography.labelSmall) },
+                            placeholder = { Text("Nama/No. Meja", style = MaterialTheme.typography.bodyMedium) },
+                            textStyle = MaterialTheme.typography.bodyMedium,
                             shape = RoundedCornerShape(8.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(48.dp),
+                                .height(56.dp),
                             singleLine = true,
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedContainerColor = MaterialTheme.colorScheme.surface,
@@ -461,7 +479,7 @@ fun CreateOrderScreen(
 
                     Column(
                         horizontalAlignment = Alignment.End,
-                        modifier = Modifier.weight(1.2f)
+                        modifier = Modifier.weight(1f) // Shrink price area
                     ) {
                         Text(
                             text = "Rp ${String.format(Locale.getDefault(), "%,.0f", orderVM.cartTotal)}",
@@ -516,7 +534,8 @@ fun CreateOrderScreen(
                             CartItemRow(
                                 item = item,
                                 onAdd = { orderVM.addToCart(item.product) },
-                                onRemove = { orderVM.removeFromCart(item.product) }
+                                onRemove = { orderVM.removeFromCart(item.product) },
+                                onQtyChange = { newQty -> orderVM.updateCartQty(item.product, newQty) }
                             )
                             HorizontalDivider(color = Color.LightGray.copy(alpha = 0.3f), thickness = 0.5.dp)
                         }
@@ -540,14 +559,16 @@ fun CreateOrderScreen(
                         enabled = orderVM.currentCustomerName.isNotBlank() && orderVM.cart.isNotEmpty(),
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.outlineVariant,
-                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            containerColor = MaterialTheme.colorScheme.tertiary,
+                            contentColor = MaterialTheme.colorScheme.onTertiary,
+                            disabledContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                            disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                         ),
                         modifier = Modifier
                             .weight(1f)
                             .height(48.dp)
                     ) {
-                        Text("Simpan Draft", style = MaterialTheme.typography.labelLarge)
+                        Text("Simpan Draft", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                     }
 
                     Button(
@@ -569,13 +590,15 @@ fun CreateOrderScreen(
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                            disabledContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                            disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                         ),
                         modifier = Modifier
                             .weight(1f)
                             .height(48.dp)
                     ) {
-                        Text("Bayar", style = MaterialTheme.typography.labelLarge)
+                        Text("Bayar", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -661,7 +684,8 @@ fun ProductCard(
 fun CartItemRow(
     item: CartItem,
     onAdd: () -> Unit,
-    onRemove: () -> Unit
+    onRemove: () -> Unit,
+    onQtyChange: (Int) -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -677,7 +701,7 @@ fun CartItemRow(
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSecondaryContainer // Clear in both modes on lavender/container
+                color = MaterialTheme.colorScheme.onSecondaryContainer
             )
             Text(
                 text = "Rp ${String.format(Locale.getDefault(), "%,.0f", item.product.price)}",
@@ -688,14 +712,15 @@ fun CartItemRow(
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Smaller buttons as requested
-            IconButton(
-                onClick = onRemove,
+            Box(
+                contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(24.dp)
-                    .background(MaterialTheme.colorScheme.errorContainer, CircleShape)
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.errorContainer)
+                    .clickable { onRemove() }
             ) {
                 Icon(
                     imageVector = Icons.Default.Delete,
@@ -705,18 +730,41 @@ fun CartItemRow(
                 )
             }
 
-            Text(
-                text = "${item.qty}",
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSecondaryContainer
+            var textState by remember(item.qty) { mutableStateOf(item.qty.toString()) }
+
+            androidx.compose.foundation.text.BasicTextField(
+                value = textState,
+                onValueChange = { newVal ->
+                    val filtered = newVal.filter { it.isDigit() }
+                    textState = filtered
+                    val parsed = filtered.toIntOrNull() ?: 0
+                    onQtyChange(parsed)
+                },
+                textStyle = MaterialTheme.typography.bodyLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                ),
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                ),
+                singleLine = true,
+                modifier = Modifier
+                    .width(60.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(4.dp)
+                    )
+                    .padding(vertical = 4.dp)
             )
 
-            IconButton(
-                onClick = onAdd,
+            Box(
+                contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(24.dp)
-                    .background(MaterialTheme.colorScheme.primary, CircleShape)
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary)
+                    .clickable { onAdd() }
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,

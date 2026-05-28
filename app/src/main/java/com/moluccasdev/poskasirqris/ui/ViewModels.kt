@@ -92,6 +92,19 @@ class OrderViewModel(private val repository: AppRepository) : ViewModel() {
         }
     }
 
+    fun updateCartQty(product: ProductEntity, qty: Int) {
+        val index = cart.indexOfFirst { it.product.id == product.id }
+        if (index >= 0) {
+            if (qty > 0) {
+                cart[index] = cart[index].copy(qty = qty)
+            } else {
+                cart.removeAt(index)
+            }
+        } else if (qty > 0) {
+            cart.add(CartItem(product, qty))
+        }
+    }
+
     fun clearCart() {
         cart.clear()
         currentCustomerName = ""
