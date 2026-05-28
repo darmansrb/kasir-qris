@@ -278,7 +278,7 @@ fun DraftOrderRowItem(
                         text = "Rp ${String.format(Locale.getDefault(), "%,.0f", draft.totalPrice)}",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.secondary
+                        color = MaterialTheme.colorScheme.tertiary
                     )
                 }
 
@@ -428,7 +428,7 @@ fun CreateOrderScreen(
                     .fillMaxWidth()
                     .height(panelHeight)
                     .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-                    .background(Color(0xFFEADDFF).copy(alpha = 0.96f)) // High elevation Lavender backdrop blur equivalent
+                    .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.98f)) // Theme-aware background
                     .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
                     .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
@@ -438,7 +438,7 @@ fun CreateOrderScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(modifier = Modifier.weight(1.3f)) {
+                    Column(modifier = Modifier.weight(2f)) {
                         OutlinedTextField(
                             value = orderVM.currentCustomerName,
                             onValueChange = { orderVM.currentCustomerName = it },
@@ -449,38 +449,48 @@ fun CreateOrderScreen(
                                 .height(48.dp),
                             singleLine = true,
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = Color.White,
-                                unfocusedContainerColor = Color.White,
+                                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                                 focusedBorderColor = MaterialTheme.colorScheme.primary,
                                 unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
                             )
                         )
                     }
 
-                    Spacer(modifier = Modifier.width(16.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
 
                     Column(
                         horizontalAlignment = Alignment.End,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1.2f)
                     ) {
                         Text(
                             text = "Rp ${String.format(Locale.getDefault(), "%,.0f", orderVM.cartTotal)}",
-                            style = MaterialTheme.typography.titleLarge, // display-price style
+                            style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         
-                        // Cart expand toggle link
+                        // Cart expand toggle link with clearer instructions
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.clickable { isCartExpanded = !isCartExpanded }
                         ) {
-                            Text(
-                                text = "Keranjang (${orderVM.cartItemCount})",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Bold
-                            )
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text(
+                                    text = if (isCartExpanded) "Tutup" else "Ketuk detail",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "(${orderVM.cartItemCount} item)",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(4.dp))
                             Icon(
                                 imageVector = if (isCartExpanded) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowUp,
                                 contentDescription = "Detail",
@@ -664,52 +674,55 @@ fun CartItemRow(
             Text(
                 text = item.product.name,
                 style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
+                fontWeight = FontWeight.Bold,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onSecondaryContainer // Clear in both modes on lavender/container
             )
             Text(
-                text = "@Rp ${String.format(Locale.getDefault(), "%,.0f", item.product.price)}",
+                text = "Rp ${String.format(Locale.getDefault(), "%,.0f", item.product.price)}",
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.outline
+                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
             )
         }
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+            // Smaller buttons as requested
             IconButton(
                 onClick = onRemove,
                 modifier = Modifier
-                    .size(28.dp)
-                    .background(Color.White, CircleShape)
+                    .size(24.dp)
+                    .background(MaterialTheme.colorScheme.errorContainer, CircleShape)
             ) {
                 Icon(
                     imageVector = Icons.Default.Delete,
                     contentDescription = "Kurang",
-                    tint = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.size(16.dp)
+                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.size(14.dp)
                 )
             }
 
             Text(
                 text = "${item.qty}",
                 style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSecondaryContainer
             )
 
             IconButton(
                 onClick = onAdd,
                 modifier = Modifier
-                    .size(28.dp)
+                    .size(24.dp)
                     .background(MaterialTheme.colorScheme.primary, CircleShape)
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
                     contentDescription = "Tambah",
                     tint = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(14.dp)
                 )
             }
         }
