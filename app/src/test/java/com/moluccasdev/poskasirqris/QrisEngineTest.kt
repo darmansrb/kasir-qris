@@ -60,4 +60,21 @@ class QrisEngineTest {
         val crc = QrisEngine.calculateCrc16(data)
         assertEquals("29B1", crc)
     }
+
+    @Test
+    fun testPhpStaticQrisConversion() {
+        val phpQris = "00020101021126690021ID.CO.BANKMANDIRI.WWW01189360000801907105420211719071054220303UMI51440014ID.CO.QRIS.WWW0215ID10254365079700303UMI5204549953033605802ID5912Narinda Shop6013Kupang (Kota)61058514862070703A01630484C8"
+        
+        // 1. Extract merchant name should be "Narinda Shop"
+        val name = QrisEngine.extractMerchantName(phpQris)
+        assertEquals("Narinda Shop", name)
+        
+        // 2. Generate dynamic QRIS with nominal 50000
+        val dynamicQris = QrisEngine.generateDynamicQris(phpQris, 50000.0)
+        
+        // Let's assert details of the generated dynamic QRIS
+        assertTrue(dynamicQris.contains("010212")) // dynamic initiation
+        assertTrue(dynamicQris.contains("540550000")) // nominal 50000
+        assertTrue(dynamicQris.endsWith(QrisEngine.calculateCrc16(dynamicQris.dropLast(4))))
+    }
 }

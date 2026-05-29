@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -66,9 +67,23 @@ fun ReportScreen(reportVM: ReportViewModel) {
     val context = LocalContext.current
     val transactions by reportVM.transactionsList.collectAsState()
 
-    // Trigger report loading
+    val dateFormat = remember { SimpleDateFormat("dd MMM yyyy", Locale.getDefault()) }
+    val dateRangeText = "${dateFormat.format(Date(reportVM.startDate))} - ${dateFormat.format(Date(reportVM.endDate))}"
+
+    // Trigger report loading and reset date range to today on entering
     LaunchedEffect(Unit) {
-        reportVM.fetchReports()
+        val c = Calendar.getInstance()
+        c.set(Calendar.HOUR_OF_DAY, 0)
+        c.set(Calendar.MINUTE, 0)
+        c.set(Calendar.SECOND, 0)
+        c.set(Calendar.MILLISECOND, 0)
+        val start = c.timeInMillis
+        c.set(Calendar.HOUR_OF_DAY, 23)
+        c.set(Calendar.MINUTE, 59)
+        c.set(Calendar.SECOND, 59)
+        c.set(Calendar.MILLISECOND, 999)
+        val end = c.timeInMillis
+        reportVM.setDateRange(start, end)
     }
 
     // Stats calculations
@@ -141,10 +156,31 @@ fun ReportScreen(reportVM: ReportViewModel) {
                     elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "FILTER TANGGAL",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.outline,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Icon(
+                                imageVector = Icons.Default.DateRange,
+                                contentDescription = "Pilih Tanggal",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .clickable { selectCustomDateRange(context, reportVM) }
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "FILTER TANGGAL",
+                            text = dateRangeText,
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.outline,
+                            color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(8.dp))
@@ -174,13 +210,13 @@ fun ReportScreen(reportVM: ReportViewModel) {
                             }
 
                             Button(
-                                onClick = { setMonthRange(reportVM) },
+                                onClick = { selectCustomDateRange(context, reportVM) },
                                 shape = RoundedCornerShape(6.dp),
                                 contentPadding = PaddingValues(horizontal = 4.dp),
-                                modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer)
+                                modifier = Modifier.weight(1.3f),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer)
                             ) {
-                                Text("Bulan", style = MaterialTheme.typography.labelSmall)
+                                Text("Pilih Tanggal", style = MaterialTheme.typography.labelSmall)
                             }
                         }
                     }
@@ -343,10 +379,31 @@ fun ReportScreen(reportVM: ReportViewModel) {
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "FILTER TANGGAL",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.outline,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Icon(
+                                imageVector = Icons.Default.DateRange,
+                                contentDescription = "Pilih Tanggal",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .clickable { selectCustomDateRange(context, reportVM) }
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "FILTER TANGGAL",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.outline,
+                            text = dateRangeText,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(12.dp))
@@ -374,12 +431,12 @@ fun ReportScreen(reportVM: ReportViewModel) {
                             }
 
                             Button(
-                                onClick = { setMonthRange(reportVM) },
+                                onClick = { selectCustomDateRange(context, reportVM) },
                                 shape = RoundedCornerShape(6.dp),
-                                modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer)
+                                modifier = Modifier.weight(1.3f),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer)
                             ) {
-                                Text("Bulan Ini", style = MaterialTheme.typography.labelSmall)
+                                Text("Pilih Tanggal", style = MaterialTheme.typography.labelSmall)
                             }
                         }
                     }
@@ -528,10 +585,12 @@ private fun setTodayRange(reportVM: ReportViewModel) {
     c.set(Calendar.HOUR_OF_DAY, 0)
     c.set(Calendar.MINUTE, 0)
     c.set(Calendar.SECOND, 0)
+    c.set(Calendar.MILLISECOND, 0)
     val start = c.timeInMillis
     c.set(Calendar.HOUR_OF_DAY, 23)
     c.set(Calendar.MINUTE, 59)
     c.set(Calendar.SECOND, 59)
+    c.set(Calendar.MILLISECOND, 999)
     val end = c.timeInMillis
     reportVM.setDateRange(start, end)
 }
@@ -542,6 +601,7 @@ private fun setWeekRange(reportVM: ReportViewModel) {
     c.set(Calendar.HOUR_OF_DAY, 0)
     c.set(Calendar.MINUTE, 0)
     c.set(Calendar.SECOND, 0)
+    c.set(Calendar.MILLISECOND, 0)
     val start = c.timeInMillis
     val end = System.currentTimeMillis()
     reportVM.setDateRange(start, end)
@@ -553,9 +613,77 @@ private fun setMonthRange(reportVM: ReportViewModel) {
     c.set(Calendar.HOUR_OF_DAY, 0)
     c.set(Calendar.MINUTE, 0)
     c.set(Calendar.SECOND, 0)
-    val start = c.timeInMillis
+    c.set(Calendar.MILLISECOND, 0)
+    var start = c.timeInMillis
     val end = System.currentTimeMillis()
+    
+    val thirtyDaysInMillis = 30L * 24 * 60 * 60 * 1000
+    if (end - start > thirtyDaysInMillis) {
+        val startCal = Calendar.getInstance()
+        startCal.timeInMillis = end
+        startCal.add(Calendar.DAY_OF_YEAR, -29)
+        startCal.set(Calendar.HOUR_OF_DAY, 0)
+        startCal.set(Calendar.MINUTE, 0)
+        startCal.set(Calendar.SECOND, 0)
+        startCal.set(Calendar.MILLISECOND, 0)
+        start = startCal.timeInMillis
+    }
     reportVM.setDateRange(start, end)
+}
+
+private fun selectCustomDateRange(
+    context: android.content.Context,
+    reportVM: ReportViewModel
+) {
+    val calendar = Calendar.getInstance()
+    
+    val startDialog = android.app.DatePickerDialog(
+        context,
+        { _, startYear, startMonth, startDay ->
+            val startCal = Calendar.getInstance()
+            startCal.set(startYear, startMonth, startDay, 0, 0, 0)
+            startCal.set(Calendar.MILLISECOND, 0)
+            val startTime = startCal.timeInMillis
+
+            val endDialog = android.app.DatePickerDialog(
+                context,
+                { _, endYear, endMonth, endDay ->
+                    val endCal = Calendar.getInstance()
+                    endCal.set(endYear, endMonth, endDay, 23, 59, 59)
+                    endCal.set(Calendar.MILLISECOND, 999)
+                    var endTime = endCal.timeInMillis
+
+                    if (endTime < startTime) {
+                        Toast.makeText(context, "Tanggal akhir tidak boleh sebelum tanggal mulai", Toast.LENGTH_LONG).show()
+                        return@DatePickerDialog
+                    }
+
+                    val thirtyDaysInMillis = 30L * 24 * 60 * 60 * 1000
+                    if (endTime - startTime > thirtyDaysInMillis) {
+                        Toast.makeText(context, "Rentang tanggal maksimal 30 hari. Tanggal akhir disesuaikan otomatis.", Toast.LENGTH_LONG).show()
+                        val cappedEndCal = Calendar.getInstance()
+                        cappedEndCal.timeInMillis = startTime
+                        cappedEndCal.add(Calendar.DAY_OF_YEAR, 29)
+                        cappedEndCal.set(Calendar.HOUR_OF_DAY, 23)
+                        cappedEndCal.set(Calendar.MINUTE, 59)
+                        cappedEndCal.set(Calendar.SECOND, 59)
+                        cappedEndCal.set(Calendar.MILLISECOND, 999)
+                        endTime = cappedEndCal.timeInMillis
+                    }
+
+                    reportVM.setDateRange(startTime, endTime)
+                },
+                startYear, startMonth, startDay
+            )
+            endDialog.setTitle("Pilih Tanggal Akhir")
+            endDialog.show()
+        },
+        calendar.get(Calendar.YEAR),
+        calendar.get(Calendar.MONTH),
+        calendar.get(Calendar.DAY_OF_MONTH)
+    )
+    startDialog.setTitle("Pilih Tanggal Mulai")
+    startDialog.show()
 }
 
 @Composable

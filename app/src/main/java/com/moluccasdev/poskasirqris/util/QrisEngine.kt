@@ -10,13 +10,14 @@ object QrisEngine {
     fun parseEmvCo(qris: String): LinkedHashMap<String, String> {
         val map = LinkedHashMap<String, String>()
         var index = 0
-        while (index < qris.length) {
-            if (index + 4 > qris.length) break
-            val tag = qris.substring(index, index + 2)
-            val lengthStr = qris.substring(index + 2, index + 4)
+        val cleanQris = qris.trim()
+        while (index < cleanQris.length) {
+            if (index + 4 > cleanQris.length) break
+            val tag = cleanQris.substring(index, index + 2)
+            val lengthStr = cleanQris.substring(index + 2, index + 4)
             val length = lengthStr.toIntOrNull() ?: break
-            if (index + 4 + length > qris.length) break
-            val value = qris.substring(index + 4, index + 4 + length)
+            if (index + 4 + length > cleanQris.length) break
+            val value = cleanQris.substring(index + 4, index + 4 + length)
             map[tag] = value
             index += 4 + length
         }
@@ -25,54 +26,86 @@ object QrisEngine {
 
     /**
      * Extracts the merchant name (Tag 59) from the QRIS template string.
+     * Uses robust parsing and recovery.
      */
     fun extractMerchantName(qris: String): String {
-        return try {
-            val map = parseEmvCo(qris.trim())
-            map["59"] ?: "Unknown Merchant"
+        val cleanQris = qris.trim()
+        
+        // Try standard parsing first
+        try {
+            val map = parseEmvCo(cleanQris)
+            val name = map["59"]
+            if (!name.isNullOrBlank()) {
+                return name
+            }
         } catch (e: Exception) {
-            "Warkop Modern"
+            e.printStackTrace()
         }
+
+        // Robust fallback scanner: scan sequentially with error recovery (index++) to find Tag 59
+        try {
+            var index = 0
+            while (index < cleanQris.length) {
+                if (index + 4 > cleanQris.length) break
+                val tag = cleanQris.substring(index, index + 2)
+                val lengthStr = cleanQris.substring(index + 2, index + 4)
+                val length = lengthStr.toIntOrNull()
+                if (length == null || length < 0) {
+                    index++
+                    continue
+                }
+                if (index + 4 + length > cleanQris.length) {
+                    index++
+                    continue
+                }
+                val value = cleanQris.substring(index + 4, index + 4 + length)
+                if (tag == "59") {
+                    return value
+                }
+                index += 4 + length
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        return "Unknown Merchant"
     }
 
     /**
      * Generates a dynamic QRIS string by injecting the transaction amount (Tag 54)
-     * and re-calculating the CRC-16 CCITT checksum (Tag 63).
+     * using the PHP-equivalent robust string manipulation:
+     * 1. Strips the last 4 characters (CRC-16).
+     * 2. Replaces "010211" (Static initiation method) with "010212" (Dynamic initiation method).
+     * 3. Splices the formatted amount (Tag 54) directly before "5802ID" (Country code tag).
+     * 4. Recalculates the CRC-16 checksum and appends it.
      */
     fun generateDynamicQris(staticQris: String, amount: Double): String {
         try {
             val trimmedQris = staticQris.trim()
-            val map = parseEmvCo(trimmedQris)
-            
-            // Remove CRC tag (Tag 63) from the map since we will recalculate it
-            map.remove("63")
-            
-            // Set initiation method (Tag 01) to "12" (Dynamic QR)
-            map["01"] = "12"
-            
-            // Format amount as integer or float (with max 2 decimal places if needed, but in Indonesia IDR is integer)
-            val amountStr = String.format(Locale.US, "%.0f", amount)
-            map["54"] = amountStr
+            if (trimmedQris.length < 4) return staticQris
 
-            // Build standard EMVCo string
-            val builder = StringBuilder()
-            
-            // Sort tags to ensure compliance (EMVCo prefers ascending, but keeping original with inserts is also okay)
-            // Sorting is highly recommended for standard-compliance!
-            val sortedKeys = map.keys.sorted()
-            for (key in sortedKeys) {
-                val value = map[key] ?: continue
-                builder.append(key)
-                builder.append(String.format(Locale.US, "%02d", value.length))
-                builder.append(value)
+            // 1. Remove the last 4 CRC characters
+            val withoutCrc = trimmedQris.substring(0, trimmedQris.length - 4)
+
+            // 2. Change initiation method from static to dynamic
+            val step1 = withoutCrc.replace("010211", "010212")
+
+            // 3. Format amount as integer string
+            val amountStr = String.format(Locale.US, "%.0f", amount)
+            val tag54 = "54" + String.format(Locale.US, "%02d", amountStr.length) + amountStr
+
+            // 4. Inject Tag 54 directly before "5802ID"
+            val fix = if (step1.contains("5802ID")) {
+                val parts = step1.split("5802ID", limit = 2)
+                parts[0] + tag54 + "5802ID" + parts[1]
+            } else {
+                // Fallback: append at the end
+                step1 + tag54
             }
-            
-            // Append Tag 63 with length 04 (value will be calculated CRC)
-            builder.append("6304")
-            
-            val baseString = builder.toString()
-            val crc = calculateCrc16(baseString)
-            return baseString + crc
+
+            // 5. Recalculate CRC
+            val crc = calculateCrc16(fix)
+            return fix + crc
         } catch (e: Exception) {
             e.printStackTrace()
             return staticQris // Fallback to static if parsing fails
@@ -80,24 +113,23 @@ object QrisEngine {
     }
 
     /**
-     * Standard CRC-16 CCITT (0x1021) algorithm.
+     * Standard CRC-16 CCITT (0x1021) algorithm matching PHP's implementation.
      */
-    fun calculateCrc16(data: String): String {
+    fun calculateCrc16(str: String): String {
         var crc = 0xFFFF
-        val polynomial = 0x1021
-        val bytes = data.toByteArray(Charsets.ISO_8859_1)
-        
-        for (b in bytes) {
+        val strlen = str.length
+        for (c in 0 until strlen) {
+            val charCode = str[c].code
+            crc = crc xor (charCode shl 8)
             for (i in 0 until 8) {
-                val bit = (b.toInt() ushr (7 - i) and 1) == 1
-                val c15 = (crc ushr 15 and 1) == 1
-                crc = crc shl 1
-                if (c15 xor bit) {
-                    crc = crc xor polynomial
+                if ((crc and 0x8000) != 0) {
+                    crc = (crc shl 1) xor 0x1021
+                } else {
+                    crc = crc shl 1
                 }
             }
         }
-        crc = crc and 0xFFFF
-        return String.format(Locale.US, "%04X", crc)
+        val hex = crc and 0xFFFF
+        return String.format(Locale.US, "%04X", hex)
     }
 }
