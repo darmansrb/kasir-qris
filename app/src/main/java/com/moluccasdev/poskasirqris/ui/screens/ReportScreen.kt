@@ -2,6 +2,7 @@ package com.moluccasdev.poskasirqris.ui.screens
 
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -28,16 +30,19 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -49,6 +54,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -69,6 +76,16 @@ fun ReportScreen(reportVM: ReportViewModel) {
 
     val dateFormat = remember { SimpleDateFormat("dd MMM yyyy", Locale.getDefault()) }
     val dateRangeText = "${dateFormat.format(Date(reportVM.startDate))} - ${dateFormat.format(Date(reportVM.endDate))}"
+
+    // Pagination State
+    var currentPage by remember { mutableStateOf(1) }
+    var pageSize by remember { mutableStateOf(10) }
+    var pageSizeDropdownExpanded by remember { mutableStateOf(false) }
+
+    // Reset page when transaction list changes
+    LaunchedEffect(transactions.size, pageSize) {
+        currentPage = 1
+    }
 
     // Trigger report loading and reset date range to today on entering
     LaunchedEffect(Unit) {
@@ -110,23 +127,33 @@ fun ReportScreen(reportVM: ReportViewModel) {
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
     Scaffold(
+        containerColor = Color(0xFFF4F3EF), // Vintage Paper Background
         topBar = {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.background)
-                    .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp)
+                    .background(Color(0xFFF4F3EF))
+                    .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp)
             ) {
-                Text(
-                    text = "Dashboard Laporan",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
-                )
+                Box(
+                    modifier = Modifier
+                        .background(Color(0xFFFFDE4D))
+                        .border(2.dp, Color.Black, RoundedCornerShape(2.dp))
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = "DASHBOARD LAPORAN",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.Black,
+                        fontWeight = FontWeight.Black
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "Katalog riwayat penjualan kasir lunas",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline
+                    color = Color.Black,
+                    fontWeight = FontWeight.Bold
                 )
             }
         }
@@ -137,7 +164,7 @@ fun ReportScreen(reportVM: ReportViewModel) {
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 16.dp)
+                    .padding(start = 16.dp, end = 22.dp, top = 0.dp, bottom = 16.dp)
             ) {
                 // Left Column: Filter and Summary Dashboard (Scrollable)
                 Column(
@@ -149,435 +176,752 @@ fun ReportScreen(reportVM: ReportViewModel) {
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
 
-                // Date Preset Selectors
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "FILTER TANGGAL",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.outline,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Icon(
-                                imageVector = Icons.Default.DateRange,
-                                contentDescription = "Pilih Tanggal",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier
-                                    .size(20.dp)
-                                    .clickable { selectCustomDateRange(context, reportVM) }
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = dateRangeText,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
+                    // Date Preset Selectors
+                    Box(modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp, end = 4.dp)) {
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .offset(x = 4.dp, y = 4.dp)
+                                .background(Color.Black, RoundedCornerShape(4.dp))
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Button(
-                                onClick = { setTodayRange(reportVM) },
-                                shape = RoundedCornerShape(6.dp),
-                                contentPadding = PaddingValues(horizontal = 4.dp),
-                                modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer)
-                            ) {
-                                Text("Hari Ini", style = MaterialTheme.typography.labelSmall)
-                            }
-
-                            Button(
-                                onClick = { setWeekRange(reportVM) },
-                                shape = RoundedCornerShape(6.dp),
-                                contentPadding = PaddingValues(horizontal = 4.dp),
-                                modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer)
-                            ) {
-                                Text("Minggu", style = MaterialTheme.typography.labelSmall)
-                            }
-
-                            Button(
-                                onClick = { selectCustomDateRange(context, reportVM) },
-                                shape = RoundedCornerShape(6.dp),
-                                contentPadding = PaddingValues(horizontal = 4.dp),
-                                modifier = Modifier.weight(1.3f),
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer)
-                            ) {
-                                Text("Pilih Tanggal", style = MaterialTheme.typography.labelSmall)
-                            }
-                        }
-                    }
-                }
-
-                // Summary Stats Cards
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Text(
-                            text = "TOTAL PENDAPATAN",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "Rp ${String.format(Locale.getDefault(), "%,.0f", totalRevenue)}",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-
-                // Count Stats Row
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Text("TRANSAKSI", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text("$totalCount kali", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-                    }
-                }
-
-                // Cash vs QRIS Ratio Progress Indicator
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Text(
-                            text = "RASIO TUNAI vs QRIS",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.outline,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("Tunai (${100 - (qrisPercentage * 100).toInt()}%)", style = MaterialTheme.typography.labelSmall)
-                            Text("QRIS (${(qrisPercentage * 100).toInt()}%)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-                        }
-                        
-                        Spacer(modifier = Modifier.height(4.dp))
-                        
-                        LinearProgressIndicator(
-                            progress = { qrisPercentage },
-                            color = MaterialTheme.colorScheme.primary,
-                            trackColor = MaterialTheme.colorScheme.outlineVariant,
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(8.dp)
-                                .clip(RoundedCornerShape(4.dp))
+                                .background(Color.White, RoundedCornerShape(4.dp))
+                                .border(2.5.dp, Color.Black, RoundedCornerShape(4.dp))
+                                .padding(12.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "FILTER TANGGAL",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.Black,
+                                    fontWeight = FontWeight.Black
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.DateRange,
+                                    contentDescription = "Pilih Tanggal",
+                                    tint = Color.Black,
+                                    modifier = Modifier
+                                        .size(20.dp)
+                                        .clickable { selectCustomDateRange(context, reportVM) }
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = dateRangeText.uppercase(Locale.getDefault()),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.Black,
+                                fontWeight = FontWeight.Black
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable { setTodayRange(reportVM) }
+                                        .background(Color(0xFFE8D5FF), RoundedCornerShape(4.dp))
+                                        .border(2.dp, Color.Black, RoundedCornerShape(4.dp))
+                                        .padding(vertical = 6.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("HARI INI", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Black)
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable { setWeekRange(reportVM) }
+                                        .background(Color(0xFFE8D5FF), RoundedCornerShape(4.dp))
+                                        .border(2.dp, Color.Black, RoundedCornerShape(4.dp))
+                                        .padding(vertical = 6.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("MINGGU", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Black)
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1.3f)
+                                        .clickable { selectCustomDateRange(context, reportVM) }
+                                        .background(Color(0xFFFFDE4D), RoundedCornerShape(4.dp))
+                                        .border(2.dp, Color.Black, RoundedCornerShape(4.dp))
+                                        .padding(vertical = 6.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("PILIH TANGGAL", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Black)
+                                }
+                            }
+                        }
+                    }
+
+                    // Summary Stats Cards
+                    Box(modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp, end = 4.dp)) {
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .offset(x = 4.dp, y = 4.dp)
+                                .background(Color.Black, RoundedCornerShape(4.dp))
                         )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color(0xFFFFDE4D), RoundedCornerShape(4.dp))
+                                .border(2.5.dp, Color.Black, RoundedCornerShape(4.dp))
+                                .padding(12.dp)
+                        ) {
+                            Text(
+                                text = "TOTAL PENDAPATAN",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.Black,
+                                fontWeight = FontWeight.Black
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Rp ${String.format(Locale.getDefault(), "%,.0f", totalRevenue)}",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = Color.Black,
+                                fontWeight = FontWeight.Black
+                            )
+                        }
+                    }
+
+                    // Count Stats Row
+                    Box(modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp, end = 4.dp)) {
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .offset(x = 4.dp, y = 4.dp)
+                                .background(Color.Black, RoundedCornerShape(4.dp))
+                        )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color.White, RoundedCornerShape(4.dp))
+                                .border(2.5.dp, Color.Black, RoundedCornerShape(4.dp))
+                                .padding(12.dp)
+                        ) {
+                            Text("TRANSAKSI BEKERJA", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Black)
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text("$totalCount KALI", style = MaterialTheme.typography.titleMedium, color = Color.Black, fontWeight = FontWeight.Black)
+                        }
+                    }
+
+                    // Cash vs QRIS Ratio Line Chart
+                    Box(modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp, end = 4.dp)) {
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .offset(x = 4.dp, y = 4.dp)
+                                .background(Color.Black, RoundedCornerShape(4.dp))
+                        )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color.White, RoundedCornerShape(4.dp))
+                                .border(2.5.dp, Color.Black, RoundedCornerShape(4.dp))
+                                .padding(12.dp)
+                        ) {
+                            Text(
+                                text = "RASIO TUNAI vs QRIS",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.Black,
+                                fontWeight = FontWeight.Black
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("Tunai: Rp ${String.format(Locale.getDefault(), "%,.0f", cashRevenue)} (${100 - (qrisPercentage * 100).toInt()}%)", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Black)
+                                Text("QRIS: Rp ${String.format(Locale.getDefault(), "%,.0f", qrisRevenue)} (${(qrisPercentage * 100).toInt()}%)", style = MaterialTheme.typography.labelSmall, color = Color(0xFF00F5D4), fontWeight = FontWeight.Black)
+                            }
+                            
+                            Spacer(modifier = Modifier.height(12.dp))
+                            
+                            // Line Chart Canvas
+                            RevenueLineChart(transactions = transactions)
+                        }
+                    }
+
+                    // Export Actions bottom row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { reportVM.exportCSV(context) }
+                                .background(Color.White, RoundedCornerShape(4.dp))
+                                .border(2.dp, Color.Black, RoundedCornerShape(4.dp))
+                                .padding(vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("EKSPOR CSV", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Black)
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { reportVM.exportPDF(context) }
+                                .background(Color(0xFF00F5D4), RoundedCornerShape(4.dp))
+                                .border(2.dp, Color.Black, RoundedCornerShape(4.dp))
+                                .padding(vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("EKSPOR PDF", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Black)
+                        }
                     }
                 }
 
-                // Export Actions bottom row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                // Right Column: Transaction List Workspace
+                Column(
+                    modifier = Modifier
+                        .weight(1.5f)
+                        .fillMaxHeight()
+                        .background(Color(0xFFE8D5FF).copy(alpha = 0.25f))
+                        .border(3.dp, Color.Black, RoundedCornerShape(8.dp))
+                        .padding(16.dp)
                 ) {
-                    Button(
-                        onClick = { reportVM.exportCSV(context) },
-                        shape = RoundedCornerShape(6.dp),
-                        contentPadding = PaddingValues(vertical = 8.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.outlineVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
-                        modifier = Modifier.weight(1f)
+                    // Header with Pagination Dropdown & Buttons
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Ekspor CSV", style = MaterialTheme.typography.labelSmall)
+                        Text(
+                            text = "Riwayat Transaksi".uppercase(Locale.getDefault()),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color.Black,
+                            fontWeight = FontWeight.Black
+                        )
+
+                        // Pagination Control Row
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            // Size Selector Dropdown
+                            Box {
+                                Box(
+                                    modifier = Modifier
+                                        .clickable { pageSizeDropdownExpanded = true }
+                                        .background(Color.White, RoundedCornerShape(4.dp))
+                                        .border(1.5.dp, Color.Black, RoundedCornerShape(4.dp))
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(text = "$pageSize", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Black, color = Color.Black)
+                                        Icon(imageVector = Icons.Default.KeyboardArrowDown, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color.Black)
+                                    }
+                                }
+                                DropdownMenu(
+                                    expanded = pageSizeDropdownExpanded,
+                                    onDismissRequest = { pageSizeDropdownExpanded = false }
+                                ) {
+                                    listOf(10, 25, 50, 100).forEach { size ->
+                                        DropdownMenuItem(
+                                            text = { Text("$size Transaksi", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold) },
+                                            onClick = {
+                                                pageSize = size
+                                                pageSizeDropdownExpanded = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Prev Button
+                            val totalPages = maxOf(1, kotlin.math.ceil(totalCount.toDouble() / pageSize).toInt())
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .background(if (currentPage > 1) Color.White else Color.LightGray.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
+                                    .border(1.5.dp, Color.Black, RoundedCornerShape(4.dp))
+                                    .clickable(enabled = currentPage > 1) { currentPage-- },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(imageVector = Icons.Default.KeyboardArrowLeft, contentDescription = "Prev", modifier = Modifier.size(16.dp), tint = Color.Black)
+                            }
+
+                            Text(
+                                text = "$currentPage/$totalPages",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Black,
+                                color = Color.Black
+                            )
+
+                            // Next Button
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .background(if (currentPage < totalPages) Color.White else Color.LightGray.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
+                                    .border(1.5.dp, Color.Black, RoundedCornerShape(4.dp))
+                                    .clickable(enabled = currentPage < totalPages) { currentPage++ },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(imageVector = Icons.Default.KeyboardArrowRight, contentDescription = "Next", modifier = Modifier.size(16.dp), tint = Color.Black)
+                            }
+                        }
                     }
 
-                    Button(
-                        onClick = { reportVM.exportPDF(context) },
-                        shape = RoundedCornerShape(6.dp),
-                        contentPadding = PaddingValues(vertical = 8.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Ekspor PDF", style = MaterialTheme.typography.labelSmall)
-                    }
-                }
-            }
+                    Spacer(modifier = Modifier.height(12.dp))
 
-            // Right Column: Transaction List Workspace
-            Column(
-                modifier = Modifier
-                    .weight(1.5f)
-                    .fillMaxHeight()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFFEADDFF).copy(alpha = 0.35f))
-                    .padding(16.dp)
-            ) {
-                Text(
-                    text = "Riwayat Transaksi",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
-                )
+                    if (transactions.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Belum ada data transaksi", style = MaterialTheme.typography.bodyMedium, color = Color.DarkGray, fontWeight = FontWeight.Bold)
+                        }
+                    } else {
+                        val startIndex = (currentPage - 1) * pageSize
+                        val endIndex = minOf(startIndex + pageSize, totalCount)
+                        val pagedList = transactions.subList(startIndex, endIndex)
 
-                Spacer(modifier = Modifier.height(12.dp))
-
-                if (transactions.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("Belum ada data transaksi", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(transactions) { reportItem ->
-                            TransactionRowItem(reportItem = reportItem)
+                        LazyColumn(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(pagedList) { reportItem ->
+                                TransactionRowItem(reportItem = reportItem)
+                            }
                         }
                     }
                 }
             }
-        }
         } else {
             // Portrait Mode: Single Scrollable LazyColumn for optimal scrolling compatibility
+            val totalPages = maxOf(1, kotlin.math.ceil(totalCount.toDouble() / pageSize).toInt())
+            val startIndex = (currentPage - 1) * pageSize
+            val endIndex = minOf(startIndex + pageSize, totalCount)
+            val pagedList = transactions.subList(startIndex, endIndex)
+
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 16.dp),
+                    .padding(start = 16.dp, end = 22.dp, top = 0.dp, bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
 
-            // Filter Presets Card
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "FILTER TANGGAL",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.outline,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Icon(
-                                imageVector = Icons.Default.DateRange,
-                                contentDescription = "Pilih Tanggal",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier
-                                    .size(20.dp)
-                                    .clickable { selectCustomDateRange(context, reportVM) }
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = dateRangeText,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
+                // Filter Presets Card
+                item {
+                    Box(modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp, end = 4.dp)) {
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .offset(x = 4.dp, y = 4.dp)
+                                .background(Color.Black, RoundedCornerShape(4.dp))
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Button(
-                                onClick = { setTodayRange(reportVM) },
-                                shape = RoundedCornerShape(6.dp),
-                                modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer)
-                            ) {
-                                Text("Hari Ini", style = MaterialTheme.typography.labelSmall)
-                            }
-
-                            Button(
-                                onClick = { setWeekRange(reportVM) },
-                                shape = RoundedCornerShape(6.dp),
-                                modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer)
-                            ) {
-                                Text("Minggu Ini", style = MaterialTheme.typography.labelSmall)
-                            }
-
-                            Button(
-                                onClick = { selectCustomDateRange(context, reportVM) },
-                                shape = RoundedCornerShape(6.dp),
-                                modifier = Modifier.weight(1.3f),
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer)
-                            ) {
-                                Text("Pilih Tanggal", style = MaterialTheme.typography.labelSmall)
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Summary Stats Cards
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Column(modifier = Modifier.padding(20.dp)) {
-                        Text(
-                            text = "TOTAL PENDAPATAN",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Rp ${String.format(Locale.getDefault(), "%,.0f", totalRevenue)}",
-                            style = MaterialTheme.typography.headlineLarge,
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-            }
-
-            // Count Stats Card
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text("TRANSAKSI SAKSES", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text("$totalCount kali", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-
-            // Cash vs QRIS Ratio Progress Indicator
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "RASIO TUNAI vs QRIS",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.outline,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("Tunai (${100 - (qrisPercentage * 100).toInt()}%)", style = MaterialTheme.typography.labelSmall)
-                            Text("QRIS (${(qrisPercentage * 100).toInt()}%)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-                        }
-                        
-                        Spacer(modifier = Modifier.height(6.dp))
-                        
-                        LinearProgressIndicator(
-                            progress = { qrisPercentage },
-                            color = MaterialTheme.colorScheme.primary,
-                            trackColor = MaterialTheme.colorScheme.outlineVariant,
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(12.dp)
-                                .clip(RoundedCornerShape(6.dp))
-                        )
+                                .background(Color.White, RoundedCornerShape(4.dp))
+                                .border(2.5.dp, Color.Black, RoundedCornerShape(4.dp))
+                                .padding(16.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "FILTER TANGGAL",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.Black,
+                                    fontWeight = FontWeight.Black
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.DateRange,
+                                    contentDescription = "Pilih Tanggal",
+                                    tint = Color.Black,
+                                    modifier = Modifier
+                                        .size(20.dp)
+                                        .clickable { selectCustomDateRange(context, reportVM) }
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = dateRangeText.uppercase(Locale.getDefault()),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.Black,
+                                fontWeight = FontWeight.Black
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable { setTodayRange(reportVM) }
+                                        .background(Color(0xFFE8D5FF), RoundedCornerShape(4.dp))
+                                        .border(2.dp, Color.Black, RoundedCornerShape(4.dp))
+                                        .padding(vertical = 8.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("HARI INI", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Black)
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable { setWeekRange(reportVM) }
+                                        .background(Color(0xFFE8D5FF), RoundedCornerShape(4.dp))
+                                        .border(2.dp, Color.Black, RoundedCornerShape(4.dp))
+                                        .padding(vertical = 8.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("MINGGU", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Black)
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1.3f)
+                                        .clickable { selectCustomDateRange(context, reportVM) }
+                                        .background(Color(0xFFFFDE4D), RoundedCornerShape(4.dp))
+                                        .border(2.dp, Color.Black, RoundedCornerShape(4.dp))
+                                        .padding(vertical = 8.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("PILIH TANGGAL", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Black)
+                                }
+                            }
+                        }
                     }
                 }
-            }
 
-            // Export Actions buttons
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Button(
-                        onClick = { reportVM.exportCSV(context) },
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.outlineVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Ekspor CSV", style = MaterialTheme.typography.labelLarge)
-                    }
-
-                    Button(
-                        onClick = { reportVM.exportPDF(context) },
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Ekspor PDF", style = MaterialTheme.typography.labelLarge)
-                    }
-                }
-            }
-
-            // Transaction list header
-            item {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Riwayat Transaksi",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            if (transactions.isEmpty()) {
+                // Summary Stats Card
                 item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(100.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("Belum ada data transaksi", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.outline)
+                    Box(modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp, end = 4.dp)) {
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .offset(x = 4.dp, y = 4.dp)
+                                .background(Color.Black, RoundedCornerShape(4.dp))
+                        )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color(0xFFFFDE4D), RoundedCornerShape(4.dp))
+                                .border(2.5.dp, Color.Black, RoundedCornerShape(4.dp))
+                                .padding(20.dp)
+                        ) {
+                            Text(
+                                text = "TOTAL PENDAPATAN",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.Black,
+                                fontWeight = FontWeight.Black
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Rp ${String.format(Locale.getDefault(), "%,.0f", totalRevenue)}",
+                                style = MaterialTheme.typography.headlineLarge,
+                                color = Color.Black,
+                                fontWeight = FontWeight.Black
+                            )
+                        }
                     }
                 }
-            } else {
-                items(transactions) { reportItem ->
-                    TransactionRowItem(reportItem = reportItem)
+
+                // Count Stats Card
+                item {
+                    Box(modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp, end = 4.dp)) {
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .offset(x = 4.dp, y = 4.dp)
+                                .background(Color.Black, RoundedCornerShape(4.dp))
+                        )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color.White, RoundedCornerShape(4.dp))
+                                .border(2.5.dp, Color.Black, RoundedCornerShape(4.dp))
+                                .padding(16.dp)
+                        ) {
+                            Text("TRANSAKSI SELESAI", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Black)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("$totalCount KALI", style = MaterialTheme.typography.headlineMedium, color = Color.Black, fontWeight = FontWeight.Black)
+                        }
+                    }
+                }
+
+                // Cash vs QRIS Ratio Line Chart
+                item {
+                    Box(modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp, end = 4.dp)) {
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .offset(x = 4.dp, y = 4.dp)
+                                .background(Color.Black, RoundedCornerShape(4.dp))
+                        )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color.White, RoundedCornerShape(4.dp))
+                                .border(2.5.dp, Color.Black, RoundedCornerShape(4.dp))
+                                .padding(16.dp)
+                        ) {
+                            Text(
+                                text = "RASIO TUNAI vs QRIS",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.Black,
+                                fontWeight = FontWeight.Black
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("Tunai: Rp ${String.format(Locale.getDefault(), "%,.0f", cashRevenue)} (${100 - (qrisPercentage * 100).toInt()}%)", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Black)
+                                Text("QRIS: Rp ${String.format(Locale.getDefault(), "%,.0f", qrisRevenue)} (${(qrisPercentage * 100).toInt()}%)", style = MaterialTheme.typography.labelSmall, color = Color(0xFF00F5D4), fontWeight = FontWeight.Black)
+                            }
+                            
+                            Spacer(modifier = Modifier.height(12.dp))
+                            
+                            // Line Chart Canvas
+                            RevenueLineChart(transactions = transactions)
+                        }
+                    }
+                }
+
+                // Export Actions buttons
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { reportVM.exportCSV(context) }
+                                .background(Color.White, RoundedCornerShape(4.dp))
+                                .border(2.2.dp, Color.Black, RoundedCornerShape(4.dp))
+                                .padding(vertical = 12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("EKSPOR CSV", style = MaterialTheme.typography.labelLarge, color = Color.Black, fontWeight = FontWeight.Black)
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { reportVM.exportPDF(context) }
+                                .background(Color(0xFF00F5D4), RoundedCornerShape(4.dp))
+                                .border(2.2.dp, Color.Black, RoundedCornerShape(4.dp))
+                                .padding(vertical = 12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("EKSPOR PDF", style = MaterialTheme.typography.labelLarge, color = Color.Black, fontWeight = FontWeight.Black)
+                        }
+                    }
+                }
+
+                // Transaction list header + Pagination in Portrait
+                item {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Riwayat Transaksi".uppercase(Locale.getDefault()),
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = Color.Black,
+                            fontWeight = FontWeight.Black
+                        )
+
+                        // Pagination Controls
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            // Size Selector Dropdown
+                            Box {
+                                Box(
+                                    modifier = Modifier
+                                        .clickable { pageSizeDropdownExpanded = true }
+                                        .background(Color.White, RoundedCornerShape(4.dp))
+                                        .border(1.5.dp, Color.Black, RoundedCornerShape(4.dp))
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(text = "$pageSize", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Black, color = Color.Black)
+                                        Icon(imageVector = Icons.Default.KeyboardArrowDown, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color.Black)
+                                    }
+                                }
+                                DropdownMenu(
+                                    expanded = pageSizeDropdownExpanded,
+                                    onDismissRequest = { pageSizeDropdownExpanded = false }
+                                ) {
+                                    listOf(10, 25, 50, 100).forEach { size ->
+                                        DropdownMenuItem(
+                                            text = { Text("$size Transaksi", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold) },
+                                            onClick = {
+                                                pageSize = size
+                                                pageSizeDropdownExpanded = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Prev Button
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .background(if (currentPage > 1) Color.White else Color.LightGray.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
+                                    .border(1.5.dp, Color.Black, RoundedCornerShape(4.dp))
+                                    .clickable(enabled = currentPage > 1) { currentPage-- },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(imageVector = Icons.Default.KeyboardArrowLeft, contentDescription = "Prev", modifier = Modifier.size(16.dp), tint = Color.Black)
+                            }
+
+                            Text(
+                                text = "$currentPage/$totalPages",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Black,
+                                color = Color.Black
+                            )
+
+                            // Next Button
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .background(if (currentPage < totalPages) Color.White else Color.LightGray.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
+                                    .border(1.5.dp, Color.Black, RoundedCornerShape(4.dp))
+                                    .clickable(enabled = currentPage < totalPages) { currentPage++ },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(imageVector = Icons.Default.KeyboardArrowRight, contentDescription = "Next", modifier = Modifier.size(16.dp), tint = Color.Black)
+                            }
+                        }
+                    }
+                }
+
+                if (transactions.isEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(100.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Belum ada data transaksi", style = MaterialTheme.typography.bodyLarge, color = Color.DarkGray, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                } else {
+                    items(pagedList) { reportItem ->
+                        TransactionRowItem(reportItem = reportItem)
+                    }
                 }
             }
         }
     }
 }
+
+@Composable
+fun RevenueLineChart(transactions: List<ExportHelper.TransactionReportItem>) {
+    // Canvas drawn simple Line Chart representing transactions trend
+    val cashPoints = remember(transactions) {
+        val sorted = transactions.sortedBy { it.transaction.paymentDate }
+        var currentSum = 0.0
+        sorted.map { tx ->
+            if (tx.transaction.paymentMethod == "CASH") {
+                currentSum += tx.transaction.totalAmount
+            }
+            currentSum
+        }
+    }
+
+    val qrisPoints = remember(transactions) {
+        val sorted = transactions.sortedBy { it.transaction.paymentDate }
+        var currentSum = 0.0
+        sorted.map { tx ->
+            if (tx.transaction.paymentMethod == "QRIS") {
+                currentSum += tx.transaction.totalAmount
+            }
+            currentSum
+        }
+    }
+
+    Canvas(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(130.dp)
+            .background(Color(0xFFF4F3EF), RoundedCornerShape(4.dp))
+            .border(2.dp, Color.Black, RoundedCornerShape(4.dp))
+            .padding(8.dp)
+    ) {
+        val maxAmount = maxOf(
+            1.0,
+            cashPoints.lastOrNull() ?: 1.0,
+            qrisPoints.lastOrNull() ?: 1.0
+        )
+
+        // Draw grid baseline
+        drawLine(
+            color = Color.Black.copy(alpha = 0.2f),
+            start = androidx.compose.ui.geometry.Offset(0f, size.height),
+            end = androidx.compose.ui.geometry.Offset(size.width, size.height),
+            strokeWidth = 2f
+        )
+
+        // Draw Cash Line
+        if (cashPoints.isNotEmpty()) {
+            val path = Path()
+            val stepX = size.width / (cashPoints.size - 1).coerceAtLeast(1)
+            path.moveTo(0f, size.height - (cashPoints[0] / maxAmount * size.height).toFloat())
+            for (i in 1 until cashPoints.size) {
+                path.lineTo(
+                    i * stepX,
+                    size.height - (cashPoints[i] / maxAmount * size.height).toFloat()
+                )
+            }
+            drawPath(
+                path = path,
+                color = Color.Black,
+                style = Stroke(width = 8f)
+            )
+        }
+
+        // Draw QRIS Line
+        if (qrisPoints.isNotEmpty()) {
+            val path = Path()
+            val stepX = size.width / (qrisPoints.size - 1).coerceAtLeast(1)
+            path.moveTo(0f, size.height - (qrisPoints[0] / maxAmount * size.height).toFloat())
+            for (i in 1 until qrisPoints.size) {
+                path.lineTo(
+                    i * stepX,
+                    size.height - (qrisPoints[i] / maxAmount * size.height).toFloat()
+                )
+            }
+            drawPath(
+                path = path,
+                color = Color(0xFF00F5D4),
+                style = Stroke(width = 8f)
+            )
+        }
+    }
 }
 
 private fun setTodayRange(reportVM: ReportViewModel) {
@@ -607,30 +951,6 @@ private fun setWeekRange(reportVM: ReportViewModel) {
     reportVM.setDateRange(start, end)
 }
 
-private fun setMonthRange(reportVM: ReportViewModel) {
-    val c = Calendar.getInstance()
-    c.set(Calendar.DAY_OF_MONTH, 1)
-    c.set(Calendar.HOUR_OF_DAY, 0)
-    c.set(Calendar.MINUTE, 0)
-    c.set(Calendar.SECOND, 0)
-    c.set(Calendar.MILLISECOND, 0)
-    var start = c.timeInMillis
-    val end = System.currentTimeMillis()
-    
-    val thirtyDaysInMillis = 30L * 24 * 60 * 60 * 1000
-    if (end - start > thirtyDaysInMillis) {
-        val startCal = Calendar.getInstance()
-        startCal.timeInMillis = end
-        startCal.add(Calendar.DAY_OF_YEAR, -29)
-        startCal.set(Calendar.HOUR_OF_DAY, 0)
-        startCal.set(Calendar.MINUTE, 0)
-        startCal.set(Calendar.SECOND, 0)
-        startCal.set(Calendar.MILLISECOND, 0)
-        start = startCal.timeInMillis
-    }
-    reportVM.setDateRange(start, end)
-}
-
 private fun selectCustomDateRange(
     context: android.content.Context,
     reportVM: ReportViewModel
@@ -656,22 +976,22 @@ private fun selectCustomDateRange(
                     if (endTime < startTime) {
                         Toast.makeText(context, "Tanggal akhir tidak boleh sebelum tanggal mulai", Toast.LENGTH_LONG).show()
                         return@DatePickerDialog
-                    }
+                     }
 
-                    val thirtyDaysInMillis = 30L * 24 * 60 * 60 * 1000
-                    if (endTime - startTime > thirtyDaysInMillis) {
-                        Toast.makeText(context, "Rentang tanggal maksimal 30 hari. Tanggal akhir disesuaikan otomatis.", Toast.LENGTH_LONG).show()
-                        val cappedEndCal = Calendar.getInstance()
-                        cappedEndCal.timeInMillis = startTime
-                        cappedEndCal.add(Calendar.DAY_OF_YEAR, 29)
-                        cappedEndCal.set(Calendar.HOUR_OF_DAY, 23)
-                        cappedEndCal.set(Calendar.MINUTE, 59)
-                        cappedEndCal.set(Calendar.SECOND, 59)
-                        cappedEndCal.set(Calendar.MILLISECOND, 999)
-                        endTime = cappedEndCal.timeInMillis
-                    }
+                     val thirtyDaysInMillis = 30L * 24 * 60 * 60 * 1000
+                     if (endTime - startTime > thirtyDaysInMillis) {
+                         Toast.makeText(context, "Rentang tanggal maksimal 30 hari. Tanggal akhir disesuaikan otomatis.", Toast.LENGTH_LONG).show()
+                         val cappedEndCal = Calendar.getInstance()
+                         cappedEndCal.timeInMillis = startTime
+                         cappedEndCal.add(Calendar.DAY_OF_YEAR, 29)
+                         cappedEndCal.set(Calendar.HOUR_OF_DAY, 23)
+                         cappedEndCal.set(Calendar.MINUTE, 59)
+                         cappedEndCal.set(Calendar.SECOND, 59)
+                         cappedEndCal.set(Calendar.MILLISECOND, 999)
+                         endTime = cappedEndCal.timeInMillis
+                     }
 
-                    reportVM.setDateRange(startTime, endTime)
+                     reportVM.setDateRange(startTime, endTime)
                 },
                 startYear, startMonth, startDay
             )
@@ -692,15 +1012,25 @@ fun TransactionRowItem(reportItem: ExportHelper.TransactionReportItem) {
     val tx = reportItem.transaction
     val dateFormatter = remember { SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault()) }
 
-    Card(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
-            .clickable { isExpanded = !isExpanded },
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            .padding(bottom = 4.dp, end = 4.dp)
+            .clickable { isExpanded = !isExpanded }
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .offset(x = 4.dp, y = 4.dp)
+                .background(Color.Black, RoundedCornerShape(4.dp))
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.White, RoundedCornerShape(4.dp))
+                .border(2.dp, Color.Black, RoundedCornerShape(4.dp))
+                .padding(16.dp)
+        ) {
             // Main info row
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -709,14 +1039,16 @@ fun TransactionRowItem(reportItem: ExportHelper.TransactionReportItem) {
             ) {
                 Column {
                     Text(
-                        text = reportItem.customerName,
+                        text = reportItem.customerName.uppercase(Locale.getDefault()),
                         style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Black,
+                        color = Color.Black
                     )
                     Text(
-                        text = dateFormatter.format(Date(tx.paymentDate)),
+                        text = dateFormatter.format(Date(tx.paymentDate)).uppercase(Locale.getDefault()),
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline
+                        color = Color.DarkGray,
+                        fontWeight = FontWeight.Bold
                     )
                 }
 
@@ -725,21 +1057,28 @@ fun TransactionRowItem(reportItem: ExportHelper.TransactionReportItem) {
                         Text(
                             text = "Rp ${String.format(Locale.getDefault(), "%,.0f", tx.totalAmount)}",
                             style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
+                            color = Color.Black,
+                            fontWeight = FontWeight.Black
                         )
-                        Text(
-                            text = tx.paymentMethod,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (tx.paymentMethod == "QRIS") MaterialTheme.colorScheme.primary else Color(0xFF2E7D32),
-                            fontWeight = FontWeight.Bold
-                        )
+                        Box(
+                            modifier = Modifier
+                                .background(if (tx.paymentMethod == "QRIS") Color(0xFF00F5D4) else Color(0xFFFFDE4D), RoundedCornerShape(2.dp))
+                                .border(1.dp, Color.Black, RoundedCornerShape(2.dp))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = tx.paymentMethod,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.Black,
+                                fontWeight = FontWeight.Black
+                            )
+                        }
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Icon(
                         imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                         contentDescription = "Expand details",
-                        tint = MaterialTheme.colorScheme.outline
+                        tint = Color.Black
                     )
                 }
             }
@@ -751,14 +1090,14 @@ fun TransactionRowItem(reportItem: ExportHelper.TransactionReportItem) {
                         .fillMaxWidth()
                         .padding(top = 16.dp)
                 ) {
-                    HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f), thickness = 1.dp)
+                    HorizontalDivider(color = Color.Black, thickness = 1.5.dp)
                     Spacer(modifier = Modifier.height(12.dp))
                     
                     Text(
                         text = "RINCIAN PEMBELIAN:",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline,
-                        fontWeight = FontWeight.Bold
+                        color = Color.Black,
+                        fontWeight = FontWeight.Black
                     )
                     Spacer(modifier = Modifier.height(8.dp))
 
@@ -770,21 +1109,25 @@ fun TransactionRowItem(reportItem: ExportHelper.TransactionReportItem) {
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = "${detail.qty}x ${detail.productNameSnapshot}",
+                                text = "${detail.qty}x ${detail.productNameSnapshot}".uppercase(Locale.getDefault()),
                                 style = MaterialTheme.typography.bodyMedium,
+                                color = Color.Black,
+                                fontWeight = FontWeight.Bold,
                                 modifier = Modifier.weight(1.5f)
                             )
                             Text(
                                 text = "Rp ${String.format(Locale.getDefault(), "%,.0f", detail.priceSnapshot)}",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.outline,
+                                color = Color.DarkGray,
+                                fontWeight = FontWeight.Bold,
                                 modifier = Modifier.weight(1f),
                                 textAlign = TextAlign.End
                             )
                             Text(
                                 text = "Rp ${String.format(Locale.getDefault(), "%,.0f", detail.subtotal)}",
                                 style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.SemiBold,
+                                color = Color.Black,
+                                fontWeight = FontWeight.Black,
                                 modifier = Modifier.weight(1.2f),
                                 textAlign = TextAlign.End
                             )
