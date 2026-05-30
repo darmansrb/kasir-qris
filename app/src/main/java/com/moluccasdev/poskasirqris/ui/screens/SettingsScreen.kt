@@ -579,6 +579,24 @@ fun ProductSettingsTab(
     var showEditDialog by remember { mutableStateOf(false) }
     var selectedProduct by remember { mutableStateOf<ProductEntity?>(null) }
 
+    // Search and Pagination States
+    var searchQuery by remember { mutableStateOf("") }
+    var currentPage by remember { mutableStateOf(1) }
+    var pageSize by remember { mutableStateOf(10) }
+
+    val filteredProducts = products.filter {
+        it.name.contains(searchQuery, ignoreCase = true)
+    }
+
+    val totalProducts = filteredProducts.size
+    val totalPages = maxOf(1, kotlin.math.ceil(totalProducts.toDouble() / pageSize).toInt())
+    
+    if (currentPage > totalPages) {
+        currentPage = totalPages
+    }
+    
+    val pagedProducts = filteredProducts.drop((currentPage - 1) * pageSize).take(pageSize)
+
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -620,14 +638,37 @@ fun ProductSettingsTab(
             }
         }
 
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Search Bar in stark Neo-Brutalism style
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = { 
+                searchQuery = it 
+                currentPage = 1
+            },
+            placeholder = { Text("Cari produk...", style = MaterialTheme.typography.bodyMedium, color = Color.Gray, fontWeight = FontWeight.Bold) },
+            shape = RoundedCornerShape(4.dp),
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Color.Black,
+                unfocusedBorderColor = Color.Black,
+                focusedTextColor = Color.Black,
+                unfocusedTextColor = Color.Black,
+                focusedContainerColor = Color.White,
+                unfocusedContainerColor = Color.White
+            )
+        )
+
         Spacer(modifier = Modifier.height(16.dp))
 
         // List of products inside database
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            items(products) { product ->
+            items(pagedProducts) { product ->
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -745,6 +786,107 @@ fun ProductSettingsTab(
                 }
             }
         }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Pagination row in Neo-Brutalism style
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Dropdown selection for page size (5, 10, 20, 50)
+            var showSizeDropdown by remember { mutableStateOf(false) }
+            Box {
+                Box(
+                    modifier = Modifier
+                        .clickable { showSizeDropdown = !showSizeDropdown }
+                        .background(Color.White, RoundedCornerShape(4.dp))
+                        .border(2.dp, Color.Black, RoundedCornerShape(4.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text("$pageSize / Page ▾", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Black, color = Color.Black)
+                }
+                
+                if (showSizeDropdown) {
+                    androidx.compose.material3.DropdownMenu(
+                        expanded = showSizeDropdown,
+                        onDismissRequest = { showSizeDropdown = false },
+                        modifier = Modifier.background(Color.White).border(2.dp, Color.Black)
+                    ) {
+                        listOf(5, 10, 20, 50).forEach { size ->
+                            androidx.compose.material3.DropdownMenuItem(
+                                text = { Text("$size per hal", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = Color.Black) },
+                                onClick = {
+                                    pageSize = size
+                                    currentPage = 1
+                                    showSizeDropdown = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Info text
+            val firstItemIdx = if (totalProducts == 0) 0 else (currentPage - 1) * pageSize + 1
+            val lastItemIdx = minOf(totalProducts, currentPage * pageSize)
+            Text(
+                text = "$firstItemIdx-$lastItemIdx dari $totalProducts",
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
+
+            // Next / Prev buttons
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Prev Button
+                Box(
+                    modifier = Modifier
+                        .clickable(enabled = currentPage > 1) { currentPage-- }
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .offset(x = 2.dp, y = 2.dp)
+                            .background(Color.Black, RoundedCornerShape(4.dp))
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(if (currentPage > 1) Color(0xFFFFDE4D) else Color.LightGray, RoundedCornerShape(4.dp))
+                            .border(2.dp, Color.Black, RoundedCornerShape(4.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("◀", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Black)
+                    }
+                }
+
+                // Next Button
+                Box(
+                    modifier = Modifier
+                        .clickable(enabled = currentPage < totalPages) { currentPage++ }
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .offset(x = 2.dp, y = 2.dp)
+                            .background(Color.Black, RoundedCornerShape(4.dp))
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(if (currentPage < totalPages) Color(0xFFFFDE4D) else Color.LightGray, RoundedCornerShape(4.dp))
+                            .border(2.dp, Color.Black, RoundedCornerShape(4.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("▶", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Black)
+                    }
+                }
+            }
+        }
     }
 
     if (showEditDialog) {
@@ -755,6 +897,7 @@ fun ProductSettingsTab(
         )
     }
 }
+
 
 @Composable
 fun ProductEditDialog(
