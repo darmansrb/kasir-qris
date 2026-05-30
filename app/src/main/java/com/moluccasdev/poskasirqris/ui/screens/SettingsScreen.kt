@@ -578,6 +578,7 @@ fun ProductSettingsTab(
     val context = LocalContext.current
     var showEditDialog by remember { mutableStateOf(false) }
     var selectedProduct by remember { mutableStateOf<ProductEntity?>(null) }
+    var productToDelete by remember { mutableStateOf<ProductEntity?>(null) }
 
     // Search and Pagination States
     var searchQuery by remember { mutableStateOf("") }
@@ -775,7 +776,7 @@ fun ProductSettingsTab(
                                         .size(36.dp)
                                         .background(Color(0xFFFF595E), RoundedCornerShape(4.dp))
                                         .border(2.dp, Color.Black, RoundedCornerShape(4.dp))
-                                        .clickable { settingsVM.deleteProduct(product) },
+                                        .clickable { productToDelete = product },
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(Icons.Default.Delete, contentDescription = "Hapus", tint = Color.Black, modifier = Modifier.size(18.dp))
@@ -896,8 +897,103 @@ fun ProductSettingsTab(
             onDismiss = { showEditDialog = false }
         )
     }
-}
 
+    if (productToDelete != null) {
+        Dialog(onDismissRequest = { productToDelete = null }) {
+            Box(
+                modifier = Modifier
+                    .width(320.dp)
+                    .padding(bottom = 6.dp, end = 6.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .offset(x = 6.dp, y = 6.dp)
+                        .background(Color.Black, RoundedCornerShape(12.dp))
+                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.White, RoundedCornerShape(12.dp))
+                        .border(3.dp, Color.Black, RoundedCornerShape(12.dp))
+                        .padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        text = "KONFIRMASI HAPUS",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Black,
+                        color = Color.Black
+                    )
+                    
+                    Text(
+                        text = "Apakah Anda yakin ingin menghapus \"${productToDelete?.name}\"?\n\nProduk ini hanya akan disembunyikan dari list order (tidak terhapus permanen agar data laporan historis tetap akurat).",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Black,
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(40.dp)
+                                .clickable { productToDelete = null }
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .offset(x = 3.dp, y = 3.dp)
+                                    .background(Color.Black, RoundedCornerShape(6.dp))
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .background(Color(0xFFF4F3EF), RoundedCornerShape(6.dp))
+                                    .border(2.dp, Color.Black, RoundedCornerShape(6.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("BATAL", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Black)
+                            }
+                        }
+                        
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(40.dp)
+                                .clickable {
+                                    productToDelete?.let {
+                                        settingsVM.deleteProduct(it)
+                                    }
+                                    productToDelete = null
+                                }
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .offset(x = 3.dp, y = 3.dp)
+                                    .background(Color.Black, RoundedCornerShape(6.dp))
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .background(Color(0xFFFF595E), RoundedCornerShape(6.dp))
+                                    .border(2.dp, Color.Black, RoundedCornerShape(6.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("HAPUS", style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Black)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
 @Composable
 fun ProductEditDialog(
@@ -910,7 +1006,6 @@ fun ProductEditDialog(
     var price by remember { mutableStateOf(product?.price?.toString() ?: "") }
     var imagePath by remember { mutableStateOf(product?.imagePath) }
 
-    // Gallery Picker launcher
     val pickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -924,44 +1019,71 @@ fun ProductEditDialog(
     }
 
     Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = RoundedCornerShape(12.dp),
+        Box(
             modifier = Modifier
-                .width(400.dp)
-                .padding(8.dp),
-            color = MaterialTheme.colorScheme.surface
+                .width(360.dp)
+                .padding(bottom = 6.dp, end = 6.dp)
         ) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .offset(x = 6.dp, y = 6.dp)
+                    .background(Color.Black, RoundedCornerShape(12.dp))
+            )
             Column(
-                modifier = Modifier.padding(24.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White, RoundedCornerShape(12.dp))
+                    .border(3.dp, Color.Black, RoundedCornerShape(12.dp))
+                    .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
-                    text = if (product == null) "Tambah Barang Baru" else "Edit Detail Barang",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
+                    text = if (product == null) "TAMBAH BARANG BARU" else "EDIT DETAIL BARANG",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = Color.Black,
+                    fontWeight = FontWeight.Black
                 )
 
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Nama Barang") },
-                    shape = RoundedCornerShape(8.dp),
+                    label = { Text("Nama Barang", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Bold) },
+                    shape = RoundedCornerShape(4.dp),
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color.Black,
+                        unfocusedBorderColor = Color.Black,
+                        focusedLabelColor = Color.Black,
+                        unfocusedLabelColor = Color.Black,
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black,
+                        focusedContainerColor = Color(0xFFF4F3EF),
+                        unfocusedContainerColor = Color(0xFFF4F3EF)
+                    )
                 )
 
                 OutlinedTextField(
                     value = price,
                     onValueChange = { price = it },
-                    label = { Text("Harga Barang (Rp)") },
-                    shape = RoundedCornerShape(8.dp),
+                    label = { Text("Harga Barang (Rp)", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Bold) },
+                    shape = RoundedCornerShape(4.dp),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color.Black,
+                        unfocusedBorderColor = Color.Black,
+                        focusedLabelColor = Color.Black,
+                        unfocusedLabelColor = Color.Black,
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black,
+                        focusedContainerColor = Color(0xFFF4F3EF),
+                        unfocusedContainerColor = Color(0xFFF4F3EF)
+                    )
                 )
 
-                // Select image display
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -969,61 +1091,104 @@ fun ProductEditDialog(
                 ) {
                     Text(
                         text = if (imagePath != null) "Foto Terpilih ✓" else "Belum ada foto",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (imagePath != null) Color(0xFF2E7D32) else MaterialTheme.colorScheme.outline
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = if (imagePath != null) Color(0xFF00F5D4) else Color.DarkGray
                     )
 
-                    Button(
-                        onClick = { pickerLauncher.launch("image/*") },
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
+                    Box(
+                        modifier = Modifier
+                            .height(36.dp)
+                            .clickable { pickerLauncher.launch("image/*") }
+                            .padding(bottom = 2.dp, end = 2.dp)
                     ) {
-                        Text("Pilih Galeri", style = MaterialTheme.typography.labelSmall)
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .offset(x = 2.dp, y = 2.dp)
+                                .background(Color.Black, RoundedCornerShape(4.dp))
+                        )
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .background(Color(0xFFE8D5FF), RoundedCornerShape(4.dp))
+                                .border(1.5.dp, Color.Black, RoundedCornerShape(4.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Pilih Galeri", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Black)
+                        }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Button(
-                        onClick = onDismiss,
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.outlineVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
-                        modifier = Modifier.weight(1f)
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
+                            .clickable { onDismiss() }
                     ) {
-                        Text("Batal")
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .offset(x = 3.dp, y = 3.dp)
+                                .background(Color.Black, RoundedCornerShape(4.dp))
+                        )
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .background(Color(0xFFFF595E), RoundedCornerShape(4.dp))
+                                .border(2.dp, Color.Black, RoundedCornerShape(4.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("BATAL", style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Black)
+                        }
                     }
 
-                    Button(
-                        onClick = {
-                            val parsedPrice = price.toDoubleOrNull() ?: 0.0
-                            if (name.isNotBlank() && parsedPrice > 0.0) {
-                                settingsVM.saveProduct(
-                                    id = product?.id ?: 0,
-                                    name = name,
-                                    price = parsedPrice,
-                                    imagePath = imagePath
-                                )
-                                onDismiss()
+                    val isEnabled = name.isNotBlank() && price.toDoubleOrNull() != null
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
+                            .clickable(enabled = isEnabled) {
+                                val parsedPrice = price.toDoubleOrNull() ?: 0.0
+                                if (name.isNotBlank() && parsedPrice > 0.0) {
+                                    settingsVM.saveProduct(
+                                        id = product?.id ?: 0,
+                                        name = name,
+                                        price = parsedPrice,
+                                        imagePath = imagePath
+                                    )
+                                    onDismiss()
+                                }
                             }
-                        },
-                        enabled = name.isNotBlank() && price.toDoubleOrNull() != null,
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.weight(1f)
                     ) {
-                        Text("Simpan")
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .offset(x = 3.dp, y = 3.dp)
+                                .background(Color.Black, RoundedCornerShape(4.dp))
+                        )
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .background(if (isEnabled) Color(0xFF00F5D4) else Color.LightGray, RoundedCornerShape(4.dp))
+                                .border(2.5.dp, Color.Black, RoundedCornerShape(4.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("SIMPAN", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Black)
+                        }
                     }
                 }
             }
         }
     }
 }
+
 
 // 2. QRIS CONFIG TAB WORKSPACE
 @Composable
@@ -1032,6 +1197,7 @@ fun QrisSettingsTab(
     qrisConfigs: List<QrisEntity>
 ) {
     var showAddDialog by remember { mutableStateOf(false) }
+    var qrisToDelete by remember { mutableStateOf<QrisEntity?>(null) }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
@@ -1152,7 +1318,7 @@ fun QrisSettingsTab(
                                     .size(36.dp)
                                     .background(Color(0xFFFF595E), RoundedCornerShape(4.dp))
                                     .border(2.dp, Color.Black, RoundedCornerShape(4.dp))
-                                    .clickable { settingsVM.deleteQris(qris) },
+                                    .clickable { qrisToDelete = qris },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(Icons.Default.Delete, contentDescription = "Hapus", tint = Color.Black, modifier = Modifier.size(18.dp))
@@ -1170,6 +1336,102 @@ fun QrisSettingsTab(
             onDismiss = { showAddDialog = false }
         )
     }
+
+    if (qrisToDelete != null) {
+        Dialog(onDismissRequest = { qrisToDelete = null }) {
+            Box(
+                modifier = Modifier
+                    .width(320.dp)
+                    .padding(bottom = 6.dp, end = 6.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .offset(x = 6.dp, y = 6.dp)
+                        .background(Color.Black, RoundedCornerShape(12.dp))
+                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.White, RoundedCornerShape(12.dp))
+                        .border(3.dp, Color.Black, RoundedCornerShape(12.dp))
+                        .padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        text = "KONFIRMASI HAPUS",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Black,
+                        color = Color.Black
+                    )
+                    
+                    Text(
+                        text = "Apakah Anda yakin ingin menghapus QRIS Merchant \"${qrisToDelete?.merchantName}\"?\n\nTindakan ini tidak dapat dibatalkan.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Black,
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(40.dp)
+                                .clickable { qrisToDelete = null }
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .offset(x = 3.dp, y = 3.dp)
+                                    .background(Color.Black, RoundedCornerShape(6.dp))
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .background(Color(0xFFF4F3EF), RoundedCornerShape(6.dp))
+                                    .border(2.dp, Color.Black, RoundedCornerShape(6.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("BATAL", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Black)
+                            }
+                        }
+                        
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(40.dp)
+                                .clickable {
+                                    qrisToDelete?.let {
+                                        settingsVM.deleteQris(it)
+                                    }
+                                    qrisToDelete = null
+                                }
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .offset(x = 3.dp, y = 3.dp)
+                                    .background(Color.Black, RoundedCornerShape(6.dp))
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .background(Color(0xFFFF595E), RoundedCornerShape(6.dp))
+                                    .border(2.dp, Color.Black, RoundedCornerShape(6.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("HAPUS", style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Black)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -1184,7 +1446,6 @@ fun QrisAddDialog(
 
     var showCameraScanner by remember { mutableStateOf(false) }
 
-    // Gallery Picker launcher for QR images
     val qrPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -1213,7 +1474,6 @@ fun QrisAddDialog(
         }
     }
 
-    // Camera permission request launcher
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -1238,109 +1498,162 @@ fun QrisAddDialog(
     }
 
     Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = RoundedCornerShape(12.dp),
+        Box(
             modifier = Modifier
-                .width(400.dp)
-                .padding(8.dp),
-            color = MaterialTheme.colorScheme.surface
+                .width(360.dp)
+                .padding(bottom = 6.dp, end = 6.dp)
         ) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .offset(x = 6.dp, y = 6.dp)
+                    .background(Color.Black, RoundedCornerShape(12.dp))
+            )
             Column(
                 modifier = Modifier
-                    .padding(24.dp)
+                    .fillMaxWidth()
+                    .background(Color.White, RoundedCornerShape(12.dp))
+                    .border(3.dp, Color.Black, RoundedCornerShape(12.dp))
+                    .padding(20.dp)
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
-                    text = "Tambah Master QRIS",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
+                    text = "TAMBAH MASTER QRIS",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = Color.Black,
+                    fontWeight = FontWeight.Black
                 )
 
-                // Row for Scan / Import Buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Button(
-                        onClick = {
-                            val permission = android.Manifest.permission.CAMERA
-                            val isGranted = androidx.core.content.ContextCompat.checkSelfPermission(
-                                context, permission
-                            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-                            if (isGranted) {
-                                showCameraScanner = true
-                            } else {
-                                cameraPermissionLauncher.launch(permission)
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(40.dp)
+                            .clickable {
+                                val permission = android.Manifest.permission.CAMERA
+                                val isGranted = androidx.core.content.ContextCompat.checkSelfPermission(
+                                    context, permission
+                                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                                if (isGranted) {
+                                    showCameraScanner = true
+                                } else {
+                                    cameraPermissionLauncher.launch(permission)
+                                }
                             }
-                        },
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                        ),
-                        modifier = Modifier.weight(1f)
+                            .padding(bottom = 2.dp, end = 2.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh, // Placeholder for camera icon
-                            contentDescription = "Kamera Scanner"
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .offset(x = 2.dp, y = 2.dp)
+                                .background(Color.Black, RoundedCornerShape(4.dp))
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Pindai Kamera", style = MaterialTheme.typography.labelSmall)
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .background(Color(0xFFE8D5FF), RoundedCornerShape(4.dp))
+                                .border(1.5.dp, Color.Black, RoundedCornerShape(4.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Pindai Kamera", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Black)
+                        }
                     }
 
-                    Button(
-                        onClick = { qrPickerLauncher.launch("image/*") },
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                        ),
-                        modifier = Modifier.weight(1f)
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(40.dp)
+                            .clickable { qrPickerLauncher.launch("image/*") }
+                            .padding(bottom = 2.dp, end = 2.dp)
                     ) {
-                        Text("Impor Gambar", style = MaterialTheme.typography.labelSmall)
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .offset(x = 2.dp, y = 2.dp)
+                                .background(Color.Black, RoundedCornerShape(4.dp))
+                        )
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .background(Color(0xFFFFDE4D), RoundedCornerShape(4.dp))
+                                .border(1.5.dp, Color.Black, RoundedCornerShape(4.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Impor Gambar", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Black)
+                        }
                     }
                 }
 
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                HorizontalDivider(color = Color.Black, thickness = 2.dp)
 
                 OutlinedTextField(
                     value = qrisString,
                     onValueChange = { qrisString = it },
-                    label = { Text("Paste/Hasil Scan QRIS String") },
-                    shape = RoundedCornerShape(8.dp),
+                    label = { Text("Paste/Hasil Scan QRIS String", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Bold) },
+                    shape = RoundedCornerShape(4.dp),
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("000201010211...", style = MaterialTheme.typography.labelSmall) }
+                    placeholder = { Text("000201010211...", style = MaterialTheme.typography.labelSmall) },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color.Black,
+                        unfocusedBorderColor = Color.Black,
+                        focusedLabelColor = Color.Black,
+                        unfocusedLabelColor = Color.Black,
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black,
+                        focusedContainerColor = Color(0xFFF4F3EF),
+                        unfocusedContainerColor = Color(0xFFF4F3EF)
+                    )
                 )
 
-                // Detect merchant automatically
-                Button(
-                    onClick = {
-                        val detected = QrisEngine.extractMerchantName(qrisString)
-                        name = detected
-                    },
-                    enabled = qrisString.isNotBlank(),
-                    shape = RoundedCornerShape(6.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                    ),
-                    modifier = Modifier.fillMaxWidth()
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(38.dp)
+                        .clickable(enabled = qrisString.isNotBlank()) {
+                            val detected = QrisEngine.extractMerchantName(qrisString)
+                            name = detected
+                        }
+                        .padding(bottom = 2.dp, end = 2.dp)
                 ) {
-                    Icon(Icons.Default.Refresh, contentDescription = "Deteksi")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Deteksi Otomatis Merchant Name", style = MaterialTheme.typography.labelSmall)
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .offset(x = 2.dp, y = 2.dp)
+                            .background(Color.Black, RoundedCornerShape(4.dp))
+                    )
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .background(if (qrisString.isNotBlank()) Color(0xFF00F5D4) else Color.LightGray, RoundedCornerShape(4.dp))
+                            .border(1.5.dp, Color.Black, RoundedCornerShape(4.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("Deteksi Otomatis Merchant Name", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Black)
+                    }
                 }
 
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Nama Merchant / Toko") },
-                    shape = RoundedCornerShape(8.dp),
+                    label = { Text("Nama Merchant / Toko", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Bold) },
+                    shape = RoundedCornerShape(4.dp),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    readOnly = true
+                    readOnly = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color.Black,
+                        unfocusedBorderColor = Color.Black,
+                        focusedLabelColor = Color.Black,
+                        unfocusedLabelColor = Color.Black,
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black,
+                        focusedContainerColor = Color(0xFFF4F3EF),
+                        unfocusedContainerColor = Color(0xFFF4F3EF)
+                    )
                 )
 
                 Row(
@@ -1353,43 +1666,72 @@ fun QrisAddDialog(
                     Box(
                         modifier = Modifier
                             .size(20.dp)
-                            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
-                            .background(if (isDefault) MaterialTheme.colorScheme.primary else Color.Transparent, RoundedCornerShape(4.dp))
+                            .border(2.dp, Color.Black, RoundedCornerShape(4.dp))
+                            .background(if (isDefault) Color(0xFFFFDE4D) else Color.Transparent, RoundedCornerShape(4.dp))
                     )
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text("Jadikan QRIS Default Utama", style = MaterialTheme.typography.bodyMedium)
+                    Text("Jadikan QRIS Default Utama", style = MaterialTheme.typography.bodyMedium, color = Color.Black, fontWeight = FontWeight.Bold)
                 }
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Button(
-                        onClick = onDismiss,
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.outlineVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
-                        modifier = Modifier.weight(1f)
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
+                            .clickable { onDismiss() }
                     ) {
-                        Text("Batal")
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .offset(x = 3.dp, y = 3.dp)
+                                .background(Color.Black, RoundedCornerShape(4.dp))
+                        )
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .background(Color(0xFFFF595E), RoundedCornerShape(4.dp))
+                                .border(2.dp, Color.Black, RoundedCornerShape(4.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("BATAL", style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Black)
+                        }
                     }
 
-                    Button(
-                        onClick = {
-                            if (qrisString.isNotBlank()) {
-                                settingsVM.saveQris(
-                                    id = 0,
-                                    merchantNameInput = name,
-                                    rawQris = qrisString,
-                                    isDefault = isDefault
-                                )
-                                onDismiss()
+                    val isSaveEnabled = qrisString.isNotBlank()
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
+                            .clickable(enabled = isSaveEnabled) {
+                                if (qrisString.isNotBlank()) {
+                                    settingsVM.saveQris(
+                                        id = 0,
+                                        merchantNameInput = name,
+                                        rawQris = qrisString,
+                                        isDefault = isDefault
+                                    )
+                                    onDismiss()
+                                }
                             }
-                        },
-                        enabled = qrisString.isNotBlank(),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.weight(1f)
                     ) {
-                        Text("Simpan")
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .offset(x = 3.dp, y = 3.dp)
+                                .background(Color.Black, RoundedCornerShape(4.dp))
+                        )
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .background(if (isSaveEnabled) Color(0xFF00F5D4) else Color.LightGray, RoundedCornerShape(4.dp))
+                                .border(2.5.dp, Color.Black, RoundedCornerShape(4.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("SIMPAN", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Black)
+                        }
                     }
                 }
             }
