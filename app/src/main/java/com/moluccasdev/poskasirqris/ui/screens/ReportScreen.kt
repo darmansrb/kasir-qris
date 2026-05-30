@@ -1044,15 +1044,17 @@ private fun selectCustomDateRange(
 
 @Composable
 fun TransactionRowItem(reportItem: ExportHelper.TransactionReportItem) {
-    var isExpanded by remember { mutableStateOf(false) }
+    var showDetailDialog by remember { mutableStateOf(false) }
     val tx = reportItem.transaction
     val dateFormatter = remember { SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault()) }
+    
+    val badgeBg = if (tx.paymentMethod == "QRIS") Color(0xFFFF595E) else Color(0xFF2E7D32)
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 4.dp, end = 4.dp)
-            .clickable { isExpanded = !isExpanded }
+            .clickable { showDetailDialog = true }
     ) {
         Box(
             modifier = Modifier
@@ -1098,79 +1100,264 @@ fun TransactionRowItem(reportItem: ExportHelper.TransactionReportItem) {
                         )
                         Box(
                             modifier = Modifier
-                                .background(if (tx.paymentMethod == "QRIS") Color(0xFF00F5D4) else Color(0xFFFFDE4D), RoundedCornerShape(2.dp))
+                                .background(badgeBg, RoundedCornerShape(2.dp))
                                 .border(1.dp, Color.Black, RoundedCornerShape(2.dp))
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
                                 text = tx.paymentMethod,
                                 style = MaterialTheme.typography.labelSmall,
-                                color = Color.Black,
+                                color = Color.White,
                                 fontWeight = FontWeight.Black
                             )
                         }
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Icon(
-                        imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                        contentDescription = "Expand details",
+                        imageVector = Icons.Default.KeyboardArrowRight,
+                        contentDescription = "Lihat detail",
                         tint = Color.Black
                     )
                 }
             }
+        }
+    }
 
-            // Expandable details block (snap pricing & detail mapping)
-            AnimatedVisibility(visible = isExpanded) {
+    if (showDetailDialog) {
+        androidx.compose.ui.window.Dialog(onDismissRequest = { showDetailDialog = false }) {
+            val context = LocalContext.current
+            val prefs = remember { context.getSharedPreferences("pos_settings", android.content.Context.MODE_PRIVATE) }
+            val isPrinterActive = prefs.getBoolean("is_printer_active", false)
+            val selectedPrinterAddress = prefs.getString("selected_printer_address", "") ?: ""
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 6.dp, end = 6.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .offset(x = 6.dp, y = 6.dp)
+                        .background(Color.Black, RoundedCornerShape(8.dp))
+                )
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 16.dp)
+                        .background(Color.White, RoundedCornerShape(8.dp))
+                        .border(3.dp, Color.Black, RoundedCornerShape(8.dp))
+                        .padding(20.dp)
                 ) {
-                    HorizontalDivider(color = Color.Black, thickness = 1.5.dp)
+                    // Header
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xFFE8D5FF))
+                            .border(2.dp, Color.Black, RoundedCornerShape(2.dp))
+                            .padding(8.dp)
+                    ) {
+                        Text(
+                            text = "DETAIL TRANSAKSI",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Black,
+                            color = Color.Black,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+
                     Spacer(modifier = Modifier.height(12.dp))
-                    
-                    Text(
-                        text = "RINCIAN PEMBELIAN:",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.Black,
-                        fontWeight = FontWeight.Black
-                    )
+
+                    Text("PELANGGAN: ${reportItem.customerName.uppercase(Locale.getDefault())}", fontWeight = FontWeight.Black, color = Color.Black)
+                    Text("TANGGAL: ${dateFormatter.format(Date(tx.paymentDate)).uppercase(Locale.getDefault())}", fontWeight = FontWeight.Bold, color = Color.DarkGray, fontSize = 12.sp)
+                    Text("METODE BAYAR: ${tx.paymentMethod}", fontWeight = FontWeight.Bold, color = Color.DarkGray, fontSize = 12.sp)
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    HorizontalDivider(color = Color.Black, thickness = 1.5.dp)
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    reportItem.details.forEach { detail ->
-                        Row(
+                    Text("RINCIAN PEMBELIAN:", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Black, color = Color.Black)
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(180.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        reportItem.details.forEach { detail ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "${detail.qty}x ${detail.productNameSnapshot}".uppercase(Locale.getDefault()),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = Color.Black,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.weight(1.5f)
+                                )
+                                Text(
+                                    text = "Rp ${String.format(Locale.getDefault(), "%,.0f", detail.priceSnapshot)}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = Color.DarkGray,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.weight(1f),
+                                    textAlign = TextAlign.End
+                                )
+                                Text(
+                                    text = "Rp ${String.format(Locale.getDefault(), "%,.0f", detail.subtotal)}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = Color.Black,
+                                    fontWeight = FontWeight.Black,
+                                    modifier = Modifier.weight(1.2f),
+                                    textAlign = TextAlign.End
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    HorizontalDivider(color = Color.Black, thickness = 1.5.dp)
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("TOTAL TRANSAKSI:", fontWeight = FontWeight.Black, color = Color.Black)
+                        Text("Rp ${String.format(Locale.getDefault(), "%,.0f", tx.totalAmount)}", fontWeight = FontWeight.Black, color = Color.Black)
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        if (isPrinterActive) {
+                            Box(
+                                modifier = Modifier
+                                    .weight(1.2f)
+                                    .height(44.dp)
+                                    .clickable {
+                                        printReprintReceipt(
+                                            context = context,
+                                            reportItem = reportItem,
+                                            selectedPrinterAddress = selectedPrinterAddress
+                                        )
+                                    }
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .matchParentSize()
+                                        .offset(x = 3.dp, y = 3.dp)
+                                        .background(Color.Black, RoundedCornerShape(4.dp))
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .matchParentSize()
+                                        .background(Color(0xFFFFDE4D), RoundedCornerShape(4.dp))
+                                        .border(2.dp, Color.Black, RoundedCornerShape(4.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("CETAK STRUK", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Black, color = Color.Black)
+                                }
+                            }
+                        }
+
+                        Box(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                                .weight(1f)
+                                .height(44.dp)
+                                .clickable { showDetailDialog = false }
                         ) {
-                            Text(
-                                text = "${detail.qty}x ${detail.productNameSnapshot}".uppercase(Locale.getDefault()),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = Color.Black,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.weight(1.5f)
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .offset(x = 3.dp, y = 3.dp)
+                                    .background(Color.Black, RoundedCornerShape(4.dp))
                             )
-                            Text(
-                                text = "Rp ${String.format(Locale.getDefault(), "%,.0f", detail.priceSnapshot)}",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = Color.DarkGray,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.weight(1f),
-                                textAlign = TextAlign.End
-                            )
-                            Text(
-                                text = "Rp ${String.format(Locale.getDefault(), "%,.0f", detail.subtotal)}",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = Color.Black,
-                                fontWeight = FontWeight.Black,
-                                modifier = Modifier.weight(1.2f),
-                                textAlign = TextAlign.End
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .background(Color(0xFF00F5D4), RoundedCornerShape(4.dp))
+                                    .border(2.dp, Color.Black, RoundedCornerShape(4.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("TUTUP", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Black, color = Color.Black)
+                            }
                         }
                     }
                 }
             }
         }
+    }
+}
+
+fun printReprintReceipt(
+    context: android.content.Context,
+    reportItem: ExportHelper.TransactionReportItem,
+    selectedPrinterAddress: String
+) {
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+        val connectPerm = android.Manifest.permission.BLUETOOTH_CONNECT
+        val scanPerm = android.Manifest.permission.BLUETOOTH_SCAN
+        val isConnectGranted = androidx.core.content.ContextCompat.checkSelfPermission(context, connectPerm) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        val isScanGranted = androidx.core.content.ContextCompat.checkSelfPermission(context, scanPerm) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (!isConnectGranted || !isScanGranted) {
+            android.widget.Toast.makeText(context, "Izin Bluetooth dibutuhkan untuk mencetak struk!", android.widget.Toast.LENGTH_LONG).show()
+            return
+        }
+    }
+
+    try {
+        val bluetoothPrinters = com.dantsu.escposprinter.connection.bluetooth.BluetoothPrintersConnections().list
+        val bluetoothConnection = if (selectedPrinterAddress.isNotEmpty() && bluetoothPrinters != null) {
+            bluetoothPrinters.find { it.device.address == selectedPrinterAddress }
+                ?: com.dantsu.escposprinter.connection.bluetooth.BluetoothPrintersConnections.selectFirstPaired()
+        } else {
+            com.dantsu.escposprinter.connection.bluetooth.BluetoothPrintersConnections.selectFirstPaired()
+        }
+
+        if (bluetoothConnection == null) {
+            android.widget.Toast.makeText(context, "Printer Bluetooth tidak terhubung / terpasang!", android.widget.Toast.LENGTH_LONG).show()
+            return
+        }
+
+        val printer = com.dantsu.escposprinter.EscPosPrinter(bluetoothConnection, 203, 48f, 32)
+        val dateFormatter = java.text.SimpleDateFormat("dd MMM yyyy, HH:mm", java.util.Locale.getDefault())
+        val formattedOrderDate = dateFormatter.format(java.util.Date(reportItem.transaction.paymentDate))
+        val formattedPrintDate = dateFormatter.format(java.util.Date())
+
+        val textToPrint = StringBuilder()
+        textToPrint.append("[C]<b><font size='big'>POS KASIR QRIS</font></b>\n")
+        textToPrint.append("[C]* SALINAN STRUK PEMBAYARAN *\n")
+        textToPrint.append("[C]================================\n")
+        textToPrint.append("[L]Tgl Pesan : $formattedOrderDate\n")
+        textToPrint.append("[L]Tgl Cetak : $formattedPrintDate\n")
+        textToPrint.append("[L]Pelanggan : ${reportItem.customerName.ifBlank { "Umum" }}\n")
+        textToPrint.append("[L]Bayar     : ${reportItem.transaction.paymentMethod}\n")
+        textToPrint.append("[C]--------------------------------\n")
+
+        reportItem.details.forEach { detail ->
+            val subtotal = detail.priceSnapshot * detail.qty
+            textToPrint.append("[L]${detail.productNameSnapshot}\n")
+            textToPrint.append("[L]  ${detail.qty} x Rp ${String.format(java.util.Locale.getDefault(), "%,.0f", detail.priceSnapshot)}[R]Rp ${String.format(java.util.Locale.getDefault(), "%,.0f", subtotal)}\n")
+        }
+
+        textToPrint.append("[C]--------------------------------\n")
+        textToPrint.append("[L]<b>TOTAL[R]Rp ${String.format(java.util.Locale.getDefault(), "%,.0f", reportItem.transaction.totalAmount)}</b>\n")
+        textToPrint.append("[C]================================\n")
+        textToPrint.append("[C]Terima Kasih atas\n")
+        textToPrint.append("[C]Kunjungan Anda!\n")
+        textToPrint.append("[C]Layanan POS Kasir QRIS Offline\n\n\n")
+
+        printer.printFormattedText(textToPrint.toString())
+        android.widget.Toast.makeText(context, "Struk salinan berhasil dicetak!", android.widget.Toast.LENGTH_SHORT).show()
+    } catch (e: Exception) {
+        e.printStackTrace()
+        android.widget.Toast.makeText(context, "Error printer: ${e.localizedMessage}", android.widget.Toast.LENGTH_LONG).show()
     }
 }
