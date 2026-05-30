@@ -1313,6 +1313,11 @@ fun printReprintReceipt(
     }
 
     try {
+        val prefs = context.getSharedPreferences("pos_settings", android.content.Context.MODE_PRIVATE)
+        val storeName = prefs.getString("store_name", "POS KASIR QRIS") ?: "POS KASIR QRIS"
+        val storeFooter = prefs.getString("store_footer", "Layanan POS Kasir QRIS Offline") ?: "Layanan POS Kasir QRIS Offline"
+        val logoUriString = prefs.getString("store_logo_uri", "") ?: ""
+
         val bluetoothPrinters = com.dantsu.escposprinter.connection.bluetooth.BluetoothPrintersConnections().list
         val bluetoothConnection = if (selectedPrinterAddress.isNotEmpty() && bluetoothPrinters != null) {
             bluetoothPrinters.find { it.device.address == selectedPrinterAddress }
@@ -1332,7 +1337,38 @@ fun printReprintReceipt(
         val formattedPrintDate = dateFormatter.format(java.util.Date())
 
         val textToPrint = StringBuilder()
-        textToPrint.append("[C]<b><font size='big'>POS KASIR QRIS</font></b>\n")
+
+        // 1. Logo Toko printing (if Uri is saved and can be parsed)
+        var logoPrinted = false
+        if (logoUriString.isNotEmpty()) {
+            try {
+                val uri = android.net.Uri.parse(logoUriString)
+                val inputStream = context.contentResolver.openInputStream(uri)
+                val originalBitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
+                inputStream?.close()
+                if (originalBitmap != null) {
+                    // Resize to fit printer thermal (max standard width ~200px)
+                    val width = 180
+                    val height = (originalBitmap.height * (width.toDouble() / originalBitmap.width)).toInt()
+                    val resizedBitmap = android.graphics.Bitmap.createScaledBitmap(originalBitmap, width, height, true)
+                    
+                    printer.printFormattedTextAndCut("") // flush any buffer
+                    printer.printFormattedText(
+                        "[C]<img>" + com.dantsu.escposprinter.textparser.PrinterTextParserImg.bitmapToHexadecimalString(printer, resizedBitmap) + "</img>\n"
+                    )
+                    logoPrinted = true
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
+        if (!logoPrinted) {
+            textToPrint.append("[C]<b><font size='big'>${storeName.uppercase(java.util.Locale.getDefault())}</font></b>\n")
+        } else {
+            textToPrint.append("[C]<b>${storeName.uppercase(java.util.Locale.getDefault())}</b>\n")
+        }
+
         textToPrint.append("[C]* SALINAN STRUK PEMBAYARAN *\n")
         textToPrint.append("[C]================================\n")
         textToPrint.append("[L]Tgl Pesan : $formattedOrderDate\n")
@@ -1352,7 +1388,7 @@ fun printReprintReceipt(
         textToPrint.append("[C]================================\n")
         textToPrint.append("[C]Terima Kasih atas\n")
         textToPrint.append("[C]Kunjungan Anda!\n")
-        textToPrint.append("[C]Layanan POS Kasir QRIS Offline\n\n\n")
+        textToPrint.append("[C]$storeFooter\n\n\n")
 
         printer.printFormattedText(textToPrint.toString())
         android.widget.Toast.makeText(context, "Struk salinan berhasil dicetak!", android.widget.Toast.LENGTH_SHORT).show()

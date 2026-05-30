@@ -20,6 +20,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -82,194 +86,403 @@ fun SettingsScreen(settingsVM: SettingsViewModel) {
     val products by settingsVM.allProducts.collectAsState()
     val qrisConfigs by settingsVM.qrisList.collectAsState()
 
-    var activeTab by remember { mutableStateOf("PRODUCTS") } // "PRODUCTS", "QRIS", "CONFIG"
-
-    val configuration = LocalConfiguration.current
-    val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    // Screen State: "MAIN", "STORE", "PRODUCTS", "QRIS", "CONFIG"
+    var activeSubScreen by remember { mutableStateOf("MAIN") }
 
     Scaffold(
+        containerColor = Color(0xFFF4F3EF), // Vintage Paper Background
         topBar = {
-            Column(
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.background)
-                    .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp)
+                    .background(Color(0xFFF4F3EF))
+                    .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Pengaturan",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Konfigurasi katalog barang, QRIS merchant & preferensi",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline
-                )
+                if (activeSubScreen != "MAIN") {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(Color.White, RoundedCornerShape(4.dp))
+                            .border(2.dp, Color.Black, RoundedCornerShape(4.dp))
+                            .clickable { activeSubScreen = "MAIN" },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = androidx.compose.material.icons.Icons.Default.ArrowBack,
+                            contentDescription = "Kembali",
+                            tint = Color.Black,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                }
+
+                Box(
+                    modifier = Modifier
+                        .background(Color(0xFFFFDE4D))
+                        .border(2.dp, Color.Black, RoundedCornerShape(2.dp))
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = when (activeSubScreen) {
+                            "STORE" -> "MANAJEMEN TOKO"
+                            "PRODUCTS" -> "MANAJEMEN PRODUK"
+                            "QRIS" -> "MASTER QRIS"
+                            "CONFIG" -> "PREFERENSI & BACKUP"
+                            else -> "PENGATURAN KASIR"
+                        },
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.Black,
+                        fontWeight = FontWeight.Black
+                    )
+                }
             }
         }
     ) { innerPadding ->
-        if (isLandscape) {
-            // Landscape Mode: Side-by-side Row layout
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 16.dp)
-            ) {
-                // Left Column: Tab Selectors (Scrollable Column)
-                Column(
-                    modifier = Modifier
-                        .weight(1.1f)
-                        .fillMaxHeight()
-                        .verticalScroll(rememberScrollState())
-                        .padding(end = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            when (activeSubScreen) {
+                "MAIN" -> {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Text(
+                            text = "Konfigurasi katalog barang, QRIS merchant & preferensi cetak struk offline.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.Black,
+                            fontWeight = FontWeight.Bold
+                        )
 
-                // Settings Tab items
-                SettingsTabSelectorItem(
-                    title = "Manajemen Produk",
-                    isActive = activeTab == "PRODUCTS",
-                    onClick = { activeTab = "PRODUCTS" }
-                )
-                SettingsTabSelectorItem(
-                    title = "Pengaturan Master QRIS",
-                    isActive = activeTab == "QRIS",
-                    onClick = { activeTab = "QRIS" }
-                )
-                SettingsTabSelectorItem(
-                    title = "Preferensi & Backup",
-                    isActive = activeTab == "CONFIG",
-                    onClick = { activeTab = "CONFIG" }
-                )
-            }
+                        Spacer(modifier = Modifier.height(8.dp))
 
-            // Right Column: Tab View Workspace
-            Column(
-                modifier = Modifier
-                    .weight(1.9f)
-                    .fillMaxHeight()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFFEADDFF).copy(alpha = 0.35f))
-                    .padding(16.dp)
-            ) {
-                when (activeTab) {
-                    "PRODUCTS" -> ProductSettingsTab(settingsVM, products)
-                    "QRIS" -> QrisSettingsTab(settingsVM, qrisConfigs)
-                    "CONFIG" -> ConfigSettingsTab(context)
+                        // 1. Store Management Card
+                        SettingsMenuListItem(
+                            title = "MANAJEMEN TOKO",
+                            subtitle = "Atur nama toko, logo cetak struk, dan footer",
+                            accentColor = Color(0xFFE8D5FF),
+                            onClick = { activeSubScreen = "STORE" }
+                        )
+
+                        // 2. Product Management Card
+                        SettingsMenuListItem(
+                            title = "MANAJEMEN PRODUK",
+                            subtitle = "Kelola katalog barang, tambah produk baru & harga",
+                            accentColor = Color(0xFFFFDE4D),
+                            onClick = { activeSubScreen = "PRODUCTS" }
+                        )
+
+                        // 3. QRIS Engine Card
+                        SettingsMenuListItem(
+                            title = "MASTER QRIS",
+                            subtitle = "Konfigurasi string QRIS dinamis & info merchant",
+                            accentColor = Color(0xFF00F5D4),
+                            onClick = { activeSubScreen = "QRIS" }
+                        )
+
+                        // 4. Preferences Card
+                        SettingsMenuListItem(
+                            title = "PREFERENSI & BACKUP",
+                            subtitle = "Pengaturan printer thermal, test print & backup database",
+                            accentColor = Color(0xFFFF595E),
+                            onClick = { activeSubScreen = "CONFIG" }
+                        )
+                    }
                 }
+                "STORE" -> StoreSettingsSubScreen()
+                "PRODUCTS" -> ProductSettingsTab(settingsVM, products)
+                "QRIS" -> QrisSettingsTab(settingsVM, qrisConfigs)
+                "CONFIG" -> ConfigSettingsTab(context)
             }
         }
-        } else {
-            // Portrait Mode: Top Horizontal Scrollable Tabs & Remaining Space content frame
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 16.dp)
-            ) {
-
-            // Horizontal Tab Chips
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                SettingsTabChip(
-                    title = "Manajemen Produk",
-                    isActive = activeTab == "PRODUCTS",
-                    onClick = { activeTab = "PRODUCTS" }
-                )
-                SettingsTabChip(
-                    title = "Master QRIS",
-                    isActive = activeTab == "QRIS",
-                    onClick = { activeTab = "QRIS" }
-                )
-                SettingsTabChip(
-                    title = "Preferensi & Backup",
-                    isActive = activeTab == "CONFIG",
-                    onClick = { activeTab = "CONFIG" }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Tab View Workspace (occupies remaining space)
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFFEADDFF).copy(alpha = 0.35f))
-                    .padding(16.dp)
-            ) {
-                when (activeTab) {
-                    "PRODUCTS" -> ProductSettingsTab(settingsVM, products)
-                    "QRIS" -> QrisSettingsTab(settingsVM, qrisConfigs)
-                    "CONFIG" -> ConfigSettingsTab(context)
-                }
-            }
-        }
-            }
-        }
-    }
-
-@Composable
-fun SettingsTabSelectorItem(
-    title: String,
-    isActive: Boolean,
-    onClick: () -> Unit
-) {
-    val containerColors = if (isActive) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
-    val contentColors = if (isActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(containerColors)
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
-            .clickable { onClick() }
-            .padding(12.dp),
-        contentAlignment = Alignment.CenterStart
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.labelMedium,
-            color = contentColors,
-            fontWeight = FontWeight.Bold
-        )
     }
 }
 
 @Composable
-fun SettingsTabChip(
+fun SettingsMenuListItem(
     title: String,
-    isActive: Boolean,
+    subtitle: String,
+    accentColor: Color,
     onClick: () -> Unit
 ) {
-    val containerColor = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
-    val contentColor = if (isActive) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
-    val borderColors = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
-
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(20.dp))
-            .background(containerColor)
-            .border(1.dp, borderColors, RoundedCornerShape(20.dp))
+            .fillMaxWidth()
+            .padding(bottom = 6.dp, end = 6.dp)
             .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.labelMedium,
-            color = contentColor,
-            fontWeight = FontWeight.Bold
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .offset(x = 6.dp, y = 6.dp)
+                .background(Color.Black, RoundedCornerShape(8.dp))
         )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.White, RoundedCornerShape(8.dp))
+                .border(3.dp, Color.Black, RoundedCornerShape(8.dp))
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Box(
+                    modifier = Modifier
+                        .background(accentColor, RoundedCornerShape(2.dp))
+                        .border(1.5.dp, Color.Black, RoundedCornerShape(2.dp))
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.Black,
+                        fontWeight = FontWeight.Black
+                    )
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.DarkGray,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Icon(
+                imageVector = androidx.compose.material.icons.Icons.Default.KeyboardArrowRight,
+                contentDescription = "Masuk",
+                tint = Color.Black,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun StoreSettingsSubScreen() {
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("pos_settings", android.content.Context.MODE_PRIVATE) }
+    var storeName by remember { mutableStateOf(prefs.getString("store_name", "POS KASIR QRIS") ?: "POS KASIR QRIS") }
+    var storeFooter by remember { mutableStateOf(prefs.getString("store_footer", "Layanan POS Kasir QRIS Offline") ?: "Layanan POS Kasir QRIS Offline") }
+    var logoUriString by remember { mutableStateOf(prefs.getString("store_logo_uri", "") ?: "") }
+
+    val logoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            // Persist URI permission so it survives restarts
+            try {
+                val takeFlags: Int = android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                context.contentResolver.takePersistableUriPermission(uri, takeFlags)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            logoUriString = uri.toString()
+            prefs.edit().putString("store_logo_uri", logoUriString).apply()
+            Toast.makeText(context, "Logo Toko Berhasil Dimuat!", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Box(modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp, end = 4.dp)) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .offset(x = 4.dp, y = 4.dp)
+                    .background(Color.Black, RoundedCornerShape(6.dp))
+            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White, RoundedCornerShape(6.dp))
+                    .border(2.5.dp, Color.Black, RoundedCornerShape(6.dp))
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "KONFIGURASI STRUK TOKO",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.Black,
+                    fontWeight = FontWeight.Black
+                )
+
+                // Store Name Input
+                OutlinedTextField(
+                    value = storeName,
+                    onValueChange = { storeName = it },
+                    label = { Text("Nama Toko", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Bold) },
+                    shape = RoundedCornerShape(4.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color.Black,
+                        unfocusedBorderColor = Color.Black,
+                        focusedLabelColor = Color.Black,
+                        unfocusedLabelColor = Color.Black,
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black,
+                        focusedContainerColor = Color(0xFFF4F3EF),
+                        unfocusedContainerColor = Color(0xFFF4F3EF)
+                    )
+                )
+
+                // Store Footer Input
+                OutlinedTextField(
+                    value = storeFooter,
+                    onValueChange = { storeFooter = it },
+                    label = { Text("Footer Struk", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Bold) },
+                    shape = RoundedCornerShape(4.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color.Black,
+                        unfocusedBorderColor = Color.Black,
+                        focusedLabelColor = Color.Black,
+                        unfocusedLabelColor = Color.Black,
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black,
+                        focusedContainerColor = Color(0xFFF4F3EF),
+                        unfocusedContainerColor = Color(0xFFF4F3EF)
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Logo Uploader Section
+                Text(
+                    text = "LOGO TOKO (STRUK THERMAL)",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.Black,
+                    fontWeight = FontWeight.Black
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Preview
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .background(Color(0xFFF4F3EF), RoundedCornerShape(4.dp))
+                            .border(2.dp, Color.Black, RoundedCornerShape(4.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (logoUriString.isNotEmpty()) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(LocalContext.current)
+                                    .data(Uri.parse(logoUriString))
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = "Logo Toko",
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
+                            Text("NO LOGO", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Color.Black)
+                        }
+                    }
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(38.dp)
+                                .clickable { logoPickerLauncher.launch(arrayOf("image/*")) }
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .offset(x = 3.dp, y = 3.dp)
+                                    .background(Color.Black, RoundedCornerShape(4.dp))
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .background(Color(0xFFE8D5FF), RoundedCornerShape(4.dp))
+                                    .border(1.5.dp, Color.Black, RoundedCornerShape(4.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("PILIH LOGO BARU", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Black)
+                            }
+                        }
+
+                        if (logoUriString.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(34.dp)
+                                    .clickable {
+                                        logoUriString = ""
+                                        prefs.edit().putString("store_logo_uri", "").apply()
+                                    }
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .matchParentSize()
+                                        .offset(x = 2.dp, y = 2.dp)
+                                        .background(Color.Black, RoundedCornerShape(4.dp))
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .matchParentSize()
+                                        .background(Color(0xFFFF595E), RoundedCornerShape(4.dp))
+                                        .border(1.5.dp, Color.Black, RoundedCornerShape(4.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("HAPUS LOGO", style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Black)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Save Button
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .clickable {
+                            prefs.edit()
+                                .putString("store_name", storeName)
+                                .putString("store_footer", storeFooter)
+                                .apply()
+                            Toast.makeText(context, "Pengaturan Toko Berhasil Disimpan!", Toast.LENGTH_SHORT).show()
+                        }
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .offset(x = 4.dp, y = 4.dp)
+                            .background(Color.Black, RoundedCornerShape(4.dp))
+                    )
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .background(Color(0xFF00F5D4), RoundedCornerShape(4.dp))
+                            .border(2.dp, Color.Black, RoundedCornerShape(4.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("SIMPAN PERUBAHAN", style = MaterialTheme.typography.labelLarge, color = Color.Black, fontWeight = FontWeight.Black)
+                    }
+                }
+            }
+        }
     }
 }
 
