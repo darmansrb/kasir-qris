@@ -4,6 +4,9 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -80,14 +83,60 @@ import com.moluccasdev.poskasirqris.util.QrisEngine
 import java.io.File
 import java.util.Locale
 
+
+
 @Composable
 fun SettingsScreen(settingsVM: SettingsViewModel) {
     val context = LocalContext.current
     val products by settingsVM.allProducts.collectAsState()
     val qrisConfigs by settingsVM.qrisList.collectAsState()
 
-    // Screen State: "MAIN", "STORE", "PRODUCTS", "QRIS", "CONFIG"
+    // Screen State: "MAIN", "STORE", "PRODUCTS", "QRIS", "CONFIG", "SECURITY"
     var activeSubScreen by remember { mutableStateOf("MAIN") }
+
+    val prefs = remember { context.getSharedPreferences("pos_settings", android.content.Context.MODE_PRIVATE) }
+    var targetScreenAfterAuth by remember { mutableStateOf<String?>(null) }
+    var showPinAuthDialog by remember { mutableStateOf(false) }
+
+    fun authenticateAndNavigate(targetScreen: String) {
+        val hasPin = prefs.getBoolean("use_pin", false) && !prefs.getString("secure_pin", "").isNullOrEmpty()
+        val hasBiometric = prefs.getBoolean("use_biometrics", false)
+        
+        if (!hasPin && !hasBiometric) {
+            activeSubScreen = targetScreen
+            return
+        }
+        
+        if (hasBiometric) {
+            val activity = context.findActivity()
+            if (activity != null && isBiometricAvailable(context)) {
+                showBiometricPrompt(
+                    activity = activity,
+                    title = "Autentikasi Keamanan",
+                    subtitle = "Gunakan sidik jari atau Face ID untuk masuk",
+                    onSuccess = {
+                        activeSubScreen = targetScreen
+                    },
+                    onError = { errorCode, errString ->
+                        if (hasPin) {
+                            targetScreenAfterAuth = targetScreen
+                            showPinAuthDialog = true
+                        } else {
+                            Toast.makeText(context, "Autentikasi gagal: $errString", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                )
+            } else if (hasPin) {
+                targetScreenAfterAuth = targetScreen
+                showPinAuthDialog = true
+            } else {
+                Toast.makeText(context, "Biometrik tidak tersedia", Toast.LENGTH_SHORT).show()
+            }
+        } else if (hasPin) {
+            targetScreenAfterAuth = targetScreen
+            showPinAuthDialog = true
+        }
+    }
 
     androidx.activity.compose.BackHandler(enabled = activeSubScreen != "MAIN") {
         activeSubScreen = "MAIN"
@@ -134,6 +183,7 @@ fun SettingsScreen(settingsVM: SettingsViewModel) {
                             "PRODUCTS" -> "MANAJEMEN PRODUK"
                             "QRIS" -> "MASTER QRIS"
                             "CONFIG" -> "PREFERENSI & BACKUP"
+                            "SECURITY" -> "KEAMANAN APLIKASI"
                             else -> "PENGATURAN KASIR"
                         },
                         style = MaterialTheme.typography.titleMedium,
@@ -175,20 +225,20 @@ fun SettingsScreen(settingsVM: SettingsViewModel) {
                             onClick = { activeSubScreen = "STORE" }
                         )
 
-                        // 2. Product Management Card
+                        // 2. Product Management Card (Gated)
                         SettingsMenuListItem(
                             title = "MANAJEMEN PRODUK",
                             subtitle = "Kelola katalog barang, tambah produk baru & harga",
                             accentColor = Color(0xFFFFDE4D),
-                            onClick = { activeSubScreen = "PRODUCTS" }
+                            onClick = { authenticateAndNavigate("PRODUCTS") }
                         )
 
-                        // 3. QRIS Engine Card
+                        // 3. QRIS Engine Card (Gated)
                         SettingsMenuListItem(
                             title = "MASTER QRIS",
                             subtitle = "Konfigurasi string QRIS dinamis & info merchant",
                             accentColor = Color(0xFF00F5D4),
-                            onClick = { activeSubScreen = "QRIS" }
+                            onClick = { authenticateAndNavigate("QRIS") }
                         )
 
                         // 4. Preferences Card
@@ -198,14 +248,43 @@ fun SettingsScreen(settingsVM: SettingsViewModel) {
                             accentColor = Color(0xFFFF595E),
                             onClick = { activeSubScreen = "CONFIG" }
                         )
+
+                        // 5. Security Card
+                        SettingsMenuListItem(
+                            title = "KEAMANAN",
+                            subtitle = "Kunci Manajemen Produk & Master QRIS dengan PIN / Biometrik",
+                            accentColor = Color(0xFF90E0EF),
+                            onClick = { activeSubScreen = "SECURITY" }
+                        )
                     }
                 }
                 "STORE" -> StoreSettingsSubScreen()
                 "PRODUCTS" -> ProductSettingsTab(settingsVM, products)
                 "QRIS" -> QrisSettingsTab(settingsVM, qrisConfigs)
                 "CONFIG" -> ConfigSettingsTab(context)
+                "SECURITY" -> SecuritySettingsSubScreen()
             }
         }
+    }
+
+    if (showPinAuthDialog) {
+        PinInputDialog(
+            title = "Masukkan PIN Keamanan",
+            onConfirm = { pin ->
+                val savedPin = prefs.getString("secure_pin", "")
+                if (pin == savedPin) {
+                    showPinAuthDialog = false
+                    targetScreenAfterAuth?.let {
+                        activeSubScreen = it
+                    }
+                } else {
+                    Toast.makeText(context, "PIN salah!", Toast.LENGTH_SHORT).show()
+                }
+            },
+            onDismiss = {
+                showPinAuthDialog = false
+            }
+        )
     }
 }
 
@@ -1720,3 +1799,459 @@ fun ConfigSettingsTab(context: android.content.Context) {
         }
     }
 }
+
+fun isBiometricAvailable(context: android.content.Context): Boolean {
+    val biometricManager = BiometricManager.from(context)
+    return when (biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.BIOMETRIC_WEAK)) {
+        BiometricManager.BIOMETRIC_SUCCESS -> true
+        else -> false
+    }
+}
+
+fun showBiometricPrompt(
+    activity: androidx.fragment.app.FragmentActivity,
+    title: String,
+    subtitle: String,
+    onSuccess: () -> Unit,
+    onError: (Int, String) -> Unit
+) {
+    val executor = ContextCompat.getMainExecutor(activity)
+    val biometricPrompt = BiometricPrompt(
+        activity,
+        executor,
+        object : BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                super.onAuthenticationError(errorCode, errString)
+                activity.runOnUiThread {
+                    onError(errorCode, errString.toString())
+                }
+            }
+
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                super.onAuthenticationSucceeded(result)
+                activity.runOnUiThread {
+                    onSuccess()
+                }
+            }
+
+            override fun onAuthenticationFailed() {
+                super.onAuthenticationFailed()
+            }
+        }
+    )
+
+    val promptInfo = BiometricPrompt.PromptInfo.Builder()
+        .setTitle(title)
+        .setSubtitle(subtitle)
+        .setNegativeButtonText("Batal / Gunakan PIN")
+        .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.BIOMETRIC_WEAK)
+        .build()
+
+    biometricPrompt.authenticate(promptInfo)
+}
+
+fun android.content.Context.findActivity(): androidx.fragment.app.FragmentActivity? {
+    var currentContext = this
+    while (currentContext is android.content.ContextWrapper) {
+        if (currentContext is androidx.fragment.app.FragmentActivity) {
+            return currentContext
+        }
+        currentContext = currentContext.baseContext
+    }
+    return null
+}
+
+@Composable
+fun PinInputDialog(
+    title: String,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var pinText by remember { mutableStateOf("") }
+    
+    Dialog(onDismissRequest = onDismiss) {
+        Box(
+            modifier = Modifier
+                .width(320.dp)
+                .padding(bottom = 6.dp, end = 6.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .offset(x = 6.dp, y = 6.dp)
+                    .background(Color.Black, RoundedCornerShape(12.dp))
+            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White, RoundedCornerShape(12.dp))
+                    .border(3.dp, Color.Black, RoundedCornerShape(12.dp))
+                    .padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = title.uppercase(Locale.getDefault()),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Black,
+                    color = Color.Black
+                )
+                
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    for (i in 0 until 6) {
+                        val isFilled = i < pinText.length
+                        Box(
+                            modifier = Modifier
+                                .size(20.dp)
+                                .clip(CircleShape)
+                                .background(if (isFilled) Color(0xFFFFDE4D) else Color(0xFFF4F3EF))
+                                .border(2.dp, Color.Black, CircleShape)
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                val keys = listOf(
+                    listOf("1", "2", "3"),
+                    listOf("4", "5", "6"),
+                    listOf("7", "8", "9"),
+                    listOf("C", "0", "⌫")
+                )
+                
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    keys.forEach { row ->
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            row.forEach { key ->
+                                Box(
+                                    modifier = Modifier
+                                        .size(64.dp)
+                                        .padding(bottom = 3.dp, end = 3.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .matchParentSize()
+                                            .offset(x = 3.dp, y = 3.dp)
+                                            .background(Color.Black, RoundedCornerShape(8.dp))
+                                    )
+                                    val buttonColor = when (key) {
+                                        "C" -> Color(0xFFFF595E)
+                                        "⌫" -> Color(0xFFE8D5FF)
+                                        else -> Color.White
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .matchParentSize()
+                                            .background(buttonColor, RoundedCornerShape(8.dp))
+                                            .border(2.dp, Color.Black, RoundedCornerShape(8.dp))
+                                            .clickable {
+                                                if (key == "C") {
+                                                    pinText = ""
+                                                } else if (key == "⌫") {
+                                                    if (pinText.isNotEmpty()) {
+                                                        pinText = pinText.dropLast(1)
+                                                    }
+                                                } else {
+                                                    if (pinText.length < 6) {
+                                                        pinText += key
+                                                        if (pinText.length == 6) {
+                                                            onConfirm(pinText)
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = key,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Black,
+                                            color = Color.Black
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(40.dp)
+                        .clickable { onDismiss() }
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .offset(x = 3.dp, y = 3.dp)
+                            .background(Color.Black, RoundedCornerShape(6.dp))
+                    )
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .background(Color(0xFFF4F3EF), RoundedCornerShape(6.dp))
+                            .border(2.dp, Color.Black, RoundedCornerShape(6.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "BATAL",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Black,
+                            color = Color.Black
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SecuritySettingsSubScreen() {
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("pos_settings", android.content.Context.MODE_PRIVATE) }
+    var useBiometrics by remember { mutableStateOf(prefs.getBoolean("use_biometrics", false)) }
+    var usePin by remember { mutableStateOf(prefs.getBoolean("use_pin", false)) }
+    
+    var showPinSetupDialog by remember { mutableStateOf(false) }
+    var setupStep by remember { mutableStateOf(1) }
+    var setupPinFirst by remember { mutableStateOf("") }
+    var showPinDisableDialog by remember { mutableStateOf(false) }
+    var showPinChangeDialog by remember { mutableStateOf(false) }
+    
+    val hasBiometricHardware = remember { isBiometricAvailable(context) }
+    
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Box(modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp, end = 4.dp)) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .offset(x = 4.dp, y = 4.dp)
+                    .background(Color.Black, RoundedCornerShape(6.dp))
+            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White, RoundedCornerShape(6.dp))
+                    .border(2.5.dp, Color.Black, RoundedCornerShape(6.dp))
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "AUTENTIKASI & KEAMANAN",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.Black,
+                    fontWeight = FontWeight.Black
+                )
+                
+                Text(
+                    text = "Amankan akses menu Manajemen Produk dan Master QRIS agar tidak disalahgunakan.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.DarkGray,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                HorizontalDivider(color = Color.Black, thickness = 2.dp)
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                        Text("Aktifkan PIN (6 Digit)", style = MaterialTheme.typography.bodyMedium, color = Color.Black, fontWeight = FontWeight.Black)
+                        Text("Amankan dengan 6 digit angka rahasia", style = MaterialTheme.typography.labelSmall, color = Color.DarkGray, fontWeight = FontWeight.Bold)
+                    }
+                    
+                    Box(
+                        modifier = Modifier
+                            .width(52.dp)
+                            .height(28.dp)
+                            .clip(CircleShape)
+                            .background(if (usePin) Color(0xFFFFDE4D) else Color.LightGray)
+                            .border(2.dp, Color.Black, CircleShape)
+                            .clickable {
+                                if (!usePin) {
+                                    setupStep = 1
+                                    setupPinFirst = ""
+                                    showPinSetupDialog = true
+                                } else {
+                                    showPinDisableDialog = true
+                                }
+                            }
+                            .padding(2.dp),
+                        contentAlignment = if (usePin) Alignment.CenterEnd else Alignment.CenterStart
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(20.dp)
+                                .clip(CircleShape)
+                                .background(Color.White)
+                                .border(1.5.dp, Color.Black, CircleShape)
+                        )
+                    }
+                }
+                
+                if (usePin) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(40.dp)
+                            .clickable {
+                                showPinChangeDialog = true
+                            }
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .offset(x = 3.dp, y = 3.dp)
+                                .background(Color.Black, RoundedCornerShape(6.dp))
+                        )
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .background(Color(0xFFE8D5FF), RoundedCornerShape(6.dp))
+                                .border(1.5.dp, Color.Black, RoundedCornerShape(6.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("UBAH PIN KEAMANAN", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Black)
+                        }
+                    }
+                }
+                
+                if (hasBiometricHardware) {
+                    HorizontalDivider(color = Color.Black.copy(alpha = 0.2f), thickness = 1.dp)
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                            Text("Gunakan Biometrik (Sidik Jari/Face ID)", style = MaterialTheme.typography.bodyMedium, color = Color.Black, fontWeight = FontWeight.Black)
+                            Text("Buka kunci cepat menggunakan sensor biometrik perangkat", style = MaterialTheme.typography.labelSmall, color = Color.DarkGray, fontWeight = FontWeight.Bold)
+                        }
+                        
+                        Box(
+                            modifier = Modifier
+                                .width(52.dp)
+                                .height(28.dp)
+                                .clip(CircleShape)
+                                .background(if (useBiometrics) Color(0xFF00F5D4) else Color.LightGray)
+                                .border(2.dp, Color.Black, CircleShape)
+                                .clickable {
+                                    useBiometrics = !useBiometrics
+                                    prefs.edit().putBoolean("use_biometrics", useBiometrics).apply()
+                                    Toast.makeText(context, if (useBiometrics) "Biometrik diaktifkan!" else "Biometrik dinonaktifkan!", Toast.LENGTH_SHORT).show()
+                                }
+                                .padding(2.dp),
+                            contentAlignment = if (useBiometrics) Alignment.CenterEnd else Alignment.CenterStart
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.White)
+                                    .border(1.5.dp, Color.Black, CircleShape)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    if (showPinSetupDialog) {
+        if (setupStep == 1) {
+            PinInputDialog(
+                title = "Masukkan PIN Baru (6 Digit)",
+                onConfirm = { pin ->
+                    setupPinFirst = pin
+                    setupStep = 2
+                },
+                onDismiss = {
+                    showPinSetupDialog = false
+                }
+            )
+        } else {
+            PinInputDialog(
+                title = "Konfirmasi PIN Baru",
+                onConfirm = { pin ->
+                    if (pin == setupPinFirst) {
+                        prefs.edit()
+                            .putBoolean("use_pin", true)
+                            .putString("secure_pin", pin)
+                            .apply()
+                        usePin = true
+                        showPinSetupDialog = false
+                        Toast.makeText(context, "PIN berhasil disimpan!", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, "PIN tidak cocok. Silakan coba lagi.", Toast.LENGTH_LONG).show()
+                        setupStep = 1
+                        setupPinFirst = ""
+                    }
+                },
+                onDismiss = {
+                    showPinSetupDialog = false
+                }
+            )
+        }
+    }
+    
+    if (showPinDisableDialog) {
+        PinInputDialog(
+            title = "Masukkan PIN untuk Nonaktifkan",
+            onConfirm = { pin ->
+                val savedPin = prefs.getString("secure_pin", "")
+                if (pin == savedPin) {
+                    prefs.edit()
+                        .putBoolean("use_pin", false)
+                        .putString("secure_pin", "")
+                        .apply()
+                    usePin = false
+                    showPinDisableDialog = false
+                    Toast.makeText(context, "Fitur PIN berhasil dimatikan!", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(context, "PIN salah!", Toast.LENGTH_SHORT).show()
+                }
+            },
+            onDismiss = {
+                showPinDisableDialog = false
+            }
+        )
+    }
+    
+    if (showPinChangeDialog) {
+        PinInputDialog(
+            title = "Masukkan PIN Lama",
+            onConfirm = { pin ->
+                val savedPin = prefs.getString("secure_pin", "")
+                if (pin == savedPin) {
+                    showPinChangeDialog = false
+                    setupStep = 1
+                    setupPinFirst = ""
+                    showPinSetupDialog = true
+                } else {
+                    Toast.makeText(context, "PIN salah!", Toast.LENGTH_SHORT).show()
+                }
+            },
+            onDismiss = {
+                showPinChangeDialog = false
+            }
+        )
+    }
+}
+

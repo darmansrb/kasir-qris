@@ -7,7 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import com.moluccasdev.poskasirqris.ui.POSKasirApp
 import com.moluccasdev.poskasirqris.ui.theme.POSKasirQRISTheme
 
-class MainActivity : ComponentActivity() {
+class MainActivity : androidx.fragment.app.FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()

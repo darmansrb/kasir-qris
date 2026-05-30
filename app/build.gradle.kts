@@ -74,6 +74,7 @@ dependencies {
     // Icons
     implementation("androidx.compose.material:material-icons-core")
     implementation("com.github.DantSu:ESCPOS-ThermalPrinter-Android:3.3.0")
+    implementation("androidx.biometric:biometric:1.2.0-alpha05")
 
 
     testImplementation(libs.junit)
