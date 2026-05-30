@@ -2638,9 +2638,32 @@ fun SecuritySettingsSubScreen() {
                                 .background(if (useBiometrics) Color(0xFF00F5D4) else Color.LightGray)
                                 .border(2.dp, Color.Black, CircleShape)
                                 .clickable {
-                                    useBiometrics = !useBiometrics
-                                    prefs.edit().putBoolean("use_biometrics", useBiometrics).apply()
-                                    Toast.makeText(context, if (useBiometrics) "Biometrik diaktifkan!" else "Biometrik dinonaktifkan!", Toast.LENGTH_SHORT).show()
+                                    if (!useBiometrics) {
+                                        useBiometrics = true
+                                        prefs.edit().putBoolean("use_biometrics", true).apply()
+                                        Toast.makeText(context, "Biometrik diaktifkan!", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        val activity = context.findActivity()
+                                        if (activity != null && isBiometricAvailable(context)) {
+                                            showBiometricPrompt(
+                                                activity = activity,
+                                                title = "Nonaktifkan Biometrik",
+                                                subtitle = "Verifikasi identitas Anda untuk menonaktifkan",
+                                                onSuccess = {
+                                                    useBiometrics = false
+                                                    prefs.edit().putBoolean("use_biometrics", false).apply()
+                                                    Toast.makeText(context, "Biometrik dinonaktifkan!", Toast.LENGTH_SHORT).show()
+                                                },
+                                                onError = { errorCode, errString ->
+                                                    Toast.makeText(context, "Verifikasi gagal: $errString", Toast.LENGTH_SHORT).show()
+                                                }
+                                            )
+                                        } else {
+                                            useBiometrics = false
+                                            prefs.edit().putBoolean("use_biometrics", false).apply()
+                                            Toast.makeText(context, "Biometrik dinonaktifkan!", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
                                 }
                                 .padding(2.dp),
                             contentAlignment = if (useBiometrics) Alignment.CenterEnd else Alignment.CenterStart
