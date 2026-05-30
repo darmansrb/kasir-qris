@@ -431,7 +431,7 @@ fun DraftOrderRowItem(
 
 
 /**
- * 2. NEW CATALOG & CHECKOUT SCREEN: Full screen workspace for phone
+ * 2. NEW CATALOG & CHECKOUT SCREEN: Neo-Brutalism style full screen workspace
  */
 @Composable
 fun CreateOrderScreen(
@@ -454,33 +454,51 @@ fun CreateOrderScreen(
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
     Scaffold(
+        containerColor = Color(0xFFF4F3EF), // Vintage paper background
         topBar = {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.background)
-                    .padding(start = 4.dp, end = 16.dp, top = 12.dp, bottom = 4.dp),
+                    .background(Color(0xFFF4F3EF))
+                    .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(
-                    onClick = {
-                        orderVM.clearCart()
-                        onNavigateBack()
-                    }
+                // Brutalist back button
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(Color.White, RoundedCornerShape(4.dp))
+                        .border(2.dp, Color.Black, RoundedCornerShape(4.dp))
+                        .clickable {
+                            orderVM.clearCart()
+                            onNavigateBack()
+                        },
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.ArrowBack,
                         contentDescription = "Kembali",
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = Color.Black,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = if (orderVM.currentOrderId == 0L) "Buat Pesanan Baru" else "Edit Detail Pesanan",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
-                )
+                
+                Spacer(modifier = Modifier.width(12.dp))
+                
+                // Brutalist Title Sticker
+                Box(
+                    modifier = Modifier
+                        .background(Color(0xFFFFDE4D))
+                        .border(2.dp, Color.Black, RoundedCornerShape(2.dp))
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = if (orderVM.currentOrderId == 0L) "BUAT PESANAN BARU" else "EDIT DETAIL PESANAN",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.Black,
+                        fontWeight = FontWeight.Black
+                    )
+                }
             }
         }
     ) { innerPadding ->
@@ -488,45 +506,62 @@ fun CreateOrderScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(MaterialTheme.colorScheme.background)
+                .background(Color(0xFFF4F3EF))
         ) {
 
-            // Product search bar (sm corner radius)
-            OutlinedTextField(
-                value = catalogSearch,
-                onValueChange = { catalogSearch = it },
-                placeholder = { Text("Cari barang...", style = MaterialTheme.typography.bodyMedium) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Cari") },
-                shape = RoundedCornerShape(8.dp),
+            // Product search bar with drop shadow
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 12.dp, end = 4.dp) // Room for shadow
+            ) {
+                // Shadow
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .offset(x = 4.dp, y = 4.dp)
+                        .background(Color.Black, RoundedCornerShape(4.dp))
                 )
-            )
+                
+                OutlinedTextField(
+                    value = catalogSearch,
+                    onValueChange = { catalogSearch = it },
+                    placeholder = { Text("CARI BARANG KATALOG...", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = Color.Gray) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Cari", tint = Color.Black) },
+                    shape = RoundedCornerShape(4.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.White)
+                        .border(2.5.dp, Color.Black, RoundedCornerShape(4.dp)),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color.Transparent,
+                        unfocusedBorderColor = Color.Transparent,
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black
+                    )
+                )
+            }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Catalog Grid Workspace (Scrolls separately)
+            // Catalog Grid Workspace
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
                     .padding(horizontal = 16.dp)
+                    .padding(bottom = 4.dp)
             ) {
                 if (filteredProducts.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("Barang tidak ditemukan", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.outline)
+                        Text("BARANG TIDAK DITEMUKAN", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Black, color = Color.Black)
                     }
                 } else {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(if (isLandscape) 4 else 2),
-                        contentPadding = PaddingValues(bottom = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(bottom = 16.dp, end = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
                         modifier = Modifier.fillMaxSize()
                     ) {
                         items(filteredProducts) { product ->
@@ -539,11 +574,11 @@ fun CreateOrderScreen(
                 }
             }
 
-            // STICKY BOTTOM DRAWER (Lavender, Scrollable & Expandable to prevent overlap/clipping on Landscape)
+            // STICKY BOTTOM DRAWER (Vibrant Lavender, Scrollable & Expandable)
             val panelHeight = if (isCartExpanded) {
                 if (isLandscape) 220.dp else 400.dp
             } else {
-                if (isLandscape) 110.dp else 160.dp
+                if (isLandscape) 115.dp else 165.dp
             }
             
             Column(
@@ -551,8 +586,8 @@ fun CreateOrderScreen(
                     .fillMaxWidth()
                     .height(panelHeight)
                     .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-                    .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.98f)) // Theme-aware background
-                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                    .background(Color(0xFFE8D5FF)) // Brutalist Lavender background
+                    .border(3.dp, Color.Black, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
                     .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
                 // Header Drawer: Customer input, Grand total, and Expand toggle
@@ -561,22 +596,25 @@ fun CreateOrderScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(modifier = Modifier.weight(1f)) { // Widen input
+                    Column(modifier = Modifier.weight(1.1f)) {
                         OutlinedTextField(
                             value = orderVM.currentCustomerName,
                             onValueChange = { orderVM.currentCustomerName = it },
-                            placeholder = { Text("Nama/No. Meja", style = MaterialTheme.typography.bodyMedium) },
-                            textStyle = MaterialTheme.typography.bodyMedium,
-                            shape = RoundedCornerShape(8.dp),
+                            placeholder = { Text("NAMA / NO. MEJA...", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = Color.Gray) },
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                            shape = RoundedCornerShape(4.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(56.dp),
+                                .height(52.dp)
+                                .border(2.dp, Color.Black, RoundedCornerShape(4.dp)),
                             singleLine = true,
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                                focusedContainerColor = Color.White,
+                                unfocusedContainerColor = Color.White,
+                                focusedBorderColor = Color.Transparent,
+                                unfocusedBorderColor = Color.Transparent,
+                                focusedTextColor = Color.Black,
+                                unfocusedTextColor = Color.Black
                             )
                         )
                     }
@@ -585,40 +623,51 @@ fun CreateOrderScreen(
 
                     Column(
                         horizontalAlignment = Alignment.End,
-                        modifier = Modifier.weight(1f) // Shrink price area
+                        modifier = Modifier.weight(0.9f)
                     ) {
-                        Text(
-                            text = "Rp ${String.format(Locale.getDefault(), "%,.0f", orderVM.cartTotal)}",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        // Total price highlight badge
+                        Box(
+                            modifier = Modifier
+                                .background(Color(0xFFFFD166), RoundedCornerShape(2.dp))
+                                .border(1.5.dp, Color.Black, RoundedCornerShape(2.dp))
+                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "Rp ${String.format(Locale.getDefault(), "%,.0f", orderVM.cartTotal)}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.Black,
+                                fontWeight = FontWeight.Black,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                         
-                        // Cart expand toggle link with clearer instructions
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        // Cart expand toggle
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.clickable { isCartExpanded = !isCartExpanded }
                         ) {
                             Column(horizontalAlignment = Alignment.End) {
                                 Text(
-                                    text = if (isCartExpanded) "Tutup" else "Ketuk detail",
+                                    text = if (isCartExpanded) "TUTUP DETAIL" else "LIHAT DETAIL",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontWeight = FontWeight.Bold
+                                    color = Color.Black,
+                                    fontWeight = FontWeight.Black
                                 )
                                 Text(
-                                    text = "(${orderVM.cartItemCount} item)",
+                                    text = "(${orderVM.cartItemCount} ITEM)",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                                    color = Color.Black.copy(alpha = 0.7f),
+                                    fontWeight = FontWeight.Bold
                                 )
                             }
                             Spacer(modifier = Modifier.width(4.dp))
                             Icon(
                                 imageVector = if (isCartExpanded) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowUp,
                                 contentDescription = "Detail",
-                                tint = MaterialTheme.colorScheme.primary,
+                                tint = Color.Black,
                                 modifier = Modifier.size(16.dp)
                             )
                         }
@@ -643,68 +692,108 @@ fun CreateOrderScreen(
                                 onRemove = { orderVM.removeFromCart(item.product) },
                                 onQtyChange = { newQty -> orderVM.updateCartQty(item.product, newQty) }
                             )
-                            HorizontalDivider(color = Color.LightGray.copy(alpha = 0.3f), thickness = 0.5.dp)
+                            HorizontalDivider(color = Color.Black.copy(alpha = 0.2f), thickness = 1.dp)
                         }
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                 }
 
-                // Bottom Action buttons: Simpan & Bayar
+                // Bottom Action buttons: Simpan & Bayar in Neo-Brutalism layout
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Button(
-                        onClick = {
-                            orderVM.saveAsDraft {
-                                Toast.makeText(context, "Pesanan disimpan sebagai draft!", Toast.LENGTH_SHORT).show()
-                                onNavigateBack()
-                            }
-                        },
-                        enabled = orderVM.currentCustomerName.isNotBlank() && orderVM.cart.isNotEmpty(),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.tertiary,
-                            contentColor = MaterialTheme.colorScheme.onTertiary,
-                            disabledContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                            disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                        ),
+                    // Simpan Draft Button
+                    Box(
                         modifier = Modifier
                             .weight(1f)
                             .height(48.dp)
                     ) {
-                        Text("Simpan Draft", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                        val isEnabled = orderVM.currentCustomerName.isNotBlank() && orderVM.cart.isNotEmpty()
+                        
+                        if (isEnabled) {
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .offset(x = 3.dp, y = 3.dp)
+                                    .background(Color.Black, RoundedCornerShape(4.dp))
+                            )
+                        }
+                        
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .background(
+                                    if (isEnabled) Color(0xFFFF9F1C) else Color.LightGray.copy(alpha = 0.5f),
+                                    RoundedCornerShape(4.dp)
+                                )
+                                .border(
+                                    2.dp,
+                                    if (isEnabled) Color.Black else Color.Gray,
+                                    RoundedCornerShape(4.dp)
+                                )
+                                .clickable(enabled = isEnabled) {
+                                    orderVM.saveAsDraft {
+                                        Toast.makeText(context, "Pesanan disimpan sebagai draft!", Toast.LENGTH_SHORT).show()
+                                        onNavigateBack()
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "SIMPAN DRAFT", 
+                                style = MaterialTheme.typography.labelLarge, 
+                                fontWeight = FontWeight.Black,
+                                color = if (isEnabled) Color.Black else Color.Gray
+                            )
+                        }
                     }
 
-                    Button(
-                        onClick = {
-                            // If draft doesn't exist, we save draft first so we can refer orderId during checkout
-                            if (orderVM.currentOrderId == 0L) {
-                                orderVM.saveAsDraft(clearAfterSave = false) {
-                                    calcVM.prepareCheckout(orderVM.cartTotal)
-                                    onNavigateToPayment()
-                                }
-                            } else {
-                                orderVM.saveAsDraft(clearAfterSave = false) {
-                                    calcVM.prepareCheckout(orderVM.cartTotal)
-                                    onNavigateToPayment()
-                                }
-                            }
-                        },
-                        enabled = orderVM.cart.isNotEmpty() && orderVM.currentCustomerName.isNotBlank(),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary,
-                            disabledContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                            disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                        ),
+                    // Bayar Button
+                    Box(
                         modifier = Modifier
                             .weight(1f)
                             .height(48.dp)
                     ) {
-                        Text("Bayar", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                        val isEnabled = orderVM.cart.isNotEmpty() && orderVM.currentCustomerName.isNotBlank()
+                        
+                        if (isEnabled) {
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .offset(x = 3.dp, y = 3.dp)
+                                    .background(Color.Black, RoundedCornerShape(4.dp))
+                            )
+                        }
+                        
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .background(
+                                    if (isEnabled) Color(0xFF00F5D4) else Color.LightGray.copy(alpha = 0.5f),
+                                    RoundedCornerShape(4.dp)
+                                )
+                                .border(
+                                    2.dp,
+                                    if (isEnabled) Color.Black else Color.Gray,
+                                    RoundedCornerShape(4.dp)
+                                )
+                                .clickable(enabled = isEnabled) {
+                                    orderVM.saveAsDraft(clearAfterSave = false) {
+                                        calcVM.prepareCheckout(orderVM.cartTotal)
+                                        onNavigateToPayment()
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "BAYAR", 
+                                style = MaterialTheme.typography.labelLarge, 
+                                fontWeight = FontWeight.Black,
+                                color = if (isEnabled) Color.Black else Color.Gray
+                            )
+                        }
                     }
                 }
             }
@@ -717,17 +806,28 @@ fun ProductCard(
     product: ProductEntity,
     onProductClick: () -> Unit
 ) {
-    Card(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .clickable { onProductClick() },
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            .padding(bottom = 6.dp, end = 6.dp) // Room for shadow
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
+        // Shadow
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .offset(x = 5.dp, y = 5.dp)
+                .background(Color.Black, RoundedCornerShape(4.dp))
+        )
+        
+        // Content
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(4.dp))
+                .background(Color.White)
+                .border(2.5.dp, Color.Black, RoundedCornerShape(4.dp))
+                .clickable { onProductClick() }
+        ) {
             val imageRequest = ImageRequest.Builder(LocalContext.current)
                 .data(product.imagePath?.let { File(it) })
                 .crossfade(true)
@@ -740,47 +840,58 @@ fun ProductCard(
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(110.dp)
-                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                        .height(105.dp)
+                        .clip(RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp))
                 )
             } else {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(110.dp)
-                        .background(MaterialTheme.colorScheme.primaryContainer)
-                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
+                        .height(105.dp)
+                        .background(Color(0xFFE8D5FF)) // Pastel purple placeholder
+                        .clip(RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = product.name.take(2).uppercase(Locale.getDefault()),
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        color = Color.Black,
                         style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Black
                     )
                 }
             }
+            androidx.compose.material3.HorizontalDivider(color = Color.Black, thickness = 2.dp)
 
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(12.dp)
+                    .padding(8.dp)
             ) {
                 Text(
-                    text = product.name,
+                    text = product.name.uppercase(Locale.getDefault()),
                     style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Black,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    color = Color.Black
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Rp ${String.format(Locale.getDefault(), "%,.0f", product.price)}",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.align(Alignment.End)
-                )
+                Spacer(modifier = Modifier.height(6.dp))
+                
+                // Brutalist yellow price tag
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.End)
+                        .background(Color(0xFFFFD166), RoundedCornerShape(2.dp))
+                        .border(1.dp, Color.Black, RoundedCornerShape(2.dp))
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = "Rp ${String.format(Locale.getDefault(), "%,.0f", product.price)}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.Black,
+                        fontWeight = FontWeight.Black
+                    )
+                }
             }
         }
     }
@@ -800,19 +911,20 @@ fun CartItemRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Column(modifier = Modifier.weight(1f)) {
+        Column(modifier = Modifier.weight(1.1f)) {
             Text(
-                text = item.product.name,
+                text = item.product.name.uppercase(Locale.getDefault()),
                 style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.Black,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSecondaryContainer
+                color = Color.Black
             )
             Text(
                 text = "Rp ${String.format(Locale.getDefault(), "%,.0f", item.product.price)}",
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                color = Color.Black.copy(alpha = 0.7f),
+                fontWeight = FontWeight.Bold
             )
         }
 
@@ -820,62 +932,69 @@ fun CartItemRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            // Square Minus/Delete Button
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .size(28.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.errorContainer)
+                    .background(Color(0xFFFF595E), RoundedCornerShape(4.dp))
+                    .border(1.5.dp, Color.Black, RoundedCornerShape(4.dp))
                     .clickable { onRemove() }
             ) {
                 Icon(
                     imageVector = Icons.Default.Delete,
                     contentDescription = "Kurang",
-                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                    tint = Color.Black,
                     modifier = Modifier.size(14.dp)
                 )
             }
 
             var textState by remember(item.qty) { mutableStateOf(item.qty.toString()) }
 
-            androidx.compose.foundation.text.BasicTextField(
-                value = textState,
-                onValueChange = { newVal ->
-                    val filtered = newVal.filter { it.isDigit() }
-                    textState = filtered
-                    val parsed = filtered.toIntOrNull() ?: 0
-                    onQtyChange(parsed)
-                },
-                textStyle = MaterialTheme.typography.bodyLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                ),
-                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
-                ),
-                singleLine = true,
+            // Brutalist quantity text area
+            Box(
                 modifier = Modifier
-                    .width(60.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                        shape = RoundedCornerShape(4.dp)
-                    )
-                    .padding(vertical = 4.dp)
-            )
+                    .width(48.dp)
+                    .height(28.dp)
+                    .background(Color.White, RoundedCornerShape(2.dp))
+                    .border(1.5.dp, Color.Black, RoundedCornerShape(2.dp))
+                    .padding(horizontal = 4.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                androidx.compose.foundation.text.BasicTextField(
+                    value = textState,
+                    onValueChange = { newVal ->
+                        val filtered = newVal.filter { it.isDigit() }
+                        textState = filtered
+                        val parsed = filtered.toIntOrNull() ?: 0
+                        onQtyChange(parsed)
+                    },
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.Black,
+                        color = Color.Black,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    ),
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                    ),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
 
+            // Square Add Button
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .size(28.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary)
+                    .background(Color(0xFF00F5D4), RoundedCornerShape(4.dp))
+                    .border(1.5.dp, Color.Black, RoundedCornerShape(4.dp))
                     .clickable { onAdd() }
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
                     contentDescription = "Tambah",
-                    tint = MaterialTheme.colorScheme.onPrimary,
+                    tint = Color.Black,
                     modifier = Modifier.size(14.dp)
                 )
             }
