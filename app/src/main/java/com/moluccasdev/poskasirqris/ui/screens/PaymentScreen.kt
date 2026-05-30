@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -103,7 +104,6 @@ fun PaymentScreen(
         }
     }
 
-    // Prepare checkout total directly from order total computed from database items list
     val totalAmount = orderVM.cartTotal
 
     androidx.compose.runtime.LaunchedEffect(totalAmount) {
@@ -114,28 +114,48 @@ fun PaymentScreen(
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
     Scaffold(
+        containerColor = Color(0xFFF4F3EF), // Vintage paper background
         topBar = {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.background)
-                    .padding(start = 4.dp, end = 16.dp, top = 12.dp, bottom = 4.dp),
+                    .background(Color(0xFFF4F3EF))
+                    .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onNavigateBack) {
+                // Brutalist back button
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(Color.White, RoundedCornerShape(4.dp))
+                        .border(2.dp, Color.Black, RoundedCornerShape(4.dp))
+                        .clickable { onNavigateBack() },
+                    contentAlignment = Alignment.Center
+                ) {
                     Icon(
                         imageVector = Icons.Default.ArrowBack,
                         contentDescription = "Kembali",
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = Color.Black,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = "Detail Pesanan & Pembayaran",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
-                )
+                
+                Spacer(modifier = Modifier.width(12.dp))
+                
+                // Brutalist Title Sticker
+                Box(
+                    modifier = Modifier
+                        .background(Color(0xFFFFDE4D))
+                        .border(2.dp, Color.Black, RoundedCornerShape(2.dp))
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = "PEMBAYARAN PESANAN",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.Black,
+                        fontWeight = FontWeight.Black
+                    )
+                }
             }
         }
     ) { innerPadding ->
@@ -145,130 +165,164 @@ fun PaymentScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .padding(16.dp)
+                    .padding(start = 16.dp, end = 22.dp, top = 0.dp, bottom = 16.dp)
             ) {
                 // Left Column: Show items list for draft
                 Column(
                     modifier = Modifier
-                        .weight(1.2f)
+                        .weight(1.1f)
                         .fillMaxHeight()
                         .padding(end = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Receipt Context Indicator
-                    Row(
+                    // Receipt Context Indicator (Brutalist Banner)
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .padding(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                            .background(Color(0xFFE8D5FF))
+                            .border(2.dp, Color.Black, RoundedCornerShape(2.dp))
+                            .padding(10.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Info,
-                            contentDescription = "Info",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Draft: $currentOrderName (${orderVM.cartItemCount} item)",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = "Info",
+                                tint = Color.Black,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "DRAFT: ${currentOrderName.uppercase(Locale.getDefault())} (${orderVM.cartItemCount} ITEM)",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Black,
+                                color = Color.Black,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
 
-                    // MUNCULKAN LIST BARANG YANG DIBELI/PESAN UNTUK PEMBAYARAN
-                    Card(
+                    // Purchase items box with brutalist shadow
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .weight(1f),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                            .weight(1f)
+                            .padding(bottom = 8.dp, end = 8.dp) // Room for shadow
                     ) {
-                        LazyColumn(
+                        // Shadow
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .offset(x = 6.dp, y = 6.dp)
+                                .background(Color.Black, RoundedCornerShape(4.dp))
+                        )
+                        
+                        // Content
+                        Column(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(Color.White)
+                                .border(3.dp, Color.Black, RoundedCornerShape(4.dp))
+                                .padding(12.dp)
                         ) {
-                            items(orderVM.cart) { item ->
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "RINCIAN BELANJA",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Black,
+                                color = Color.Black
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                items(orderVM.cart) { item ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = item.product.name.uppercase(Locale.getDefault()),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Black,
+                                                color = Color.Black
+                                            )
+                                            Text(
+                                                text = "${item.qty} X RP ${String.format(Locale.getDefault(), "%,.0f", item.product.price)}",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = Color.DarkGray,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
                                         Text(
-                                            text = item.product.name,
+                                            text = "Rp ${String.format(Locale.getDefault(), "%,.0f", item.product.price * item.qty)}",
                                             style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
-                                        Text(
-                                            text = "${item.qty} x Rp ${String.format(Locale.getDefault(), "%,.0f", item.product.price)}",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.outline
+                                            fontWeight = FontWeight.Black,
+                                            color = Color.Black
                                         )
                                     }
-                                    Text(
-                                        text = "Rp ${String.format(Locale.getDefault(), "%,.0f", item.product.price * item.qty)}",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
+                                    HorizontalDivider(color = Color.Black.copy(alpha = 0.2f), thickness = 1.dp)
                                 }
-                                HorizontalDivider(color = Color.LightGray.copy(alpha = 0.3f), thickness = 0.5.dp)
                             }
                         }
                     }
                 }
 
-                // Right Column: Active Checkout Workspace (Scrollable Column)
+                // Right Column: Active Checkout Workspace
                 Column(
                     modifier = Modifier
-                        .weight(1.2f)
+                        .weight(1.3f)
                         .fillMaxHeight()
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFFEADDFF).copy(alpha = 0.35f))
+                        .background(Color(0xFFFFDE4D).copy(alpha = 0.25f)) // theme style background
+                        .border(3.dp, Color.Black, RoundedCornerShape(12.dp))
                         .verticalScroll(rememberScrollState())
                         .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Text(
-                        text = "Metode Pembayaran",
+                        text = "METODE PEMBAYARAN",
                         style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
+                        color = Color.Black,
+                        fontWeight = FontWeight.Black
                     )
 
-                    // Large Price To Pay Display
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                    // Large Price Display Card with shadow
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 6.dp, end = 6.dp)
                     ) {
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .offset(x = 5.dp, y = 5.dp)
+                                .background(Color.Black, RoundedCornerShape(4.dp))
+                        )
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(12.dp),
+                                .background(Color(0xFFFFDE4D), RoundedCornerShape(4.dp))
+                                .border(2.5.dp, Color.Black, RoundedCornerShape(4.dp))
+                                .padding(16.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
                                 text = "TOTAL YANG HARUS DIBAYAR",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.outline,
-                                fontWeight = FontWeight.Bold
+                                color = Color.Black,
+                                fontWeight = FontWeight.Black
                             )
-                            Spacer(modifier = Modifier.height(2.dp))
+                            Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = "Rp ${String.format(Locale.getDefault(), "%,.0f", totalAmount)}",
                                 style = MaterialTheme.typography.titleLarge,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Bold
+                                color = Color.Black,
+                                fontWeight = FontWeight.Black
                             )
                         }
                     }
@@ -276,10 +330,10 @@ fun PaymentScreen(
                     // Checkout Select Mode
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         PaymentMethodSelectorCard(
-                            title = "TUNAI",
+                            title = "TUNAI / CASH",
                             isActive = calcVM.currentPaymentMethod == "CASH",
                             onClick = {
                                 calcVM.checkoutAmount = totalAmount
@@ -289,7 +343,7 @@ fun PaymentScreen(
                         )
 
                         PaymentMethodSelectorCard(
-                            title = "QRIS",
+                            title = "DYNAMIC QRIS",
                             isActive = calcVM.currentPaymentMethod == "QRIS",
                             onClick = {
                                 calcVM.checkoutAmount = totalAmount
@@ -299,7 +353,7 @@ fun PaymentScreen(
                         )
                     }
 
-                    // Dynamic Form based on chosen payment method
+                    // Dynamic Form
                     Box(modifier = Modifier.fillMaxWidth()) {
                         if (calcVM.currentPaymentMethod == "CASH") {
                             CashPaymentPanel(calcVM, totalAmount)
@@ -308,7 +362,7 @@ fun PaymentScreen(
                         }
                     }
 
-                    // Printer Selector (shown only if printer is active in settings)
+                    // Printer Selector
                     val isPrinterActive = remember { prefs.getBoolean("is_printer_active", false) }
                     if (isPrinterActive) {
                         Column(
@@ -317,12 +371,12 @@ fun PaymentScreen(
                                 .padding(vertical = 4.dp)
                         ) {
                             Text(
-                                text = "Printer Bluetooth Terpilih:",
+                                text = "PRINTER BLUETOOTH TERPILIH:",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.outline,
-                                fontWeight = FontWeight.Bold
+                                color = Color.Black,
+                                fontWeight = FontWeight.Black
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(6.dp))
                             
                             val currentPrinterName = pairedPrinters.find { it.device.address == selectedPrinterAddress }?.device?.name 
                                 ?: if (selectedPrinterAddress.isNotEmpty()) "Printer Terputus ($selectedPrinterAddress)" else "Belum Memilih Printer (Tap Pilih)"
@@ -330,9 +384,9 @@ fun PaymentScreen(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(MaterialTheme.colorScheme.surface)
-                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(Color.White)
+                                    .border(2.dp, Color.Black, RoundedCornerShape(4.dp))
                                     .clickable { showPrinterDropdown = !showPrinterDropdown }
                                     .padding(horizontal = 12.dp, vertical = 10.dp)
                             ) {
@@ -342,15 +396,15 @@ fun PaymentScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = currentPrinterName,
+                                        text = currentPrinterName.uppercase(Locale.getDefault()),
                                         style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurface
+                                        fontWeight = FontWeight.Black,
+                                        color = Color.Black
                                     )
                                     Icon(
                                         imageVector = if (showPrinterDropdown) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                                         contentDescription = "Pilih Printer",
-                                        tint = MaterialTheme.colorScheme.primary
+                                        tint = Color.Black
                                     )
                                 }
                             }
@@ -359,17 +413,19 @@ fun PaymentScreen(
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(top = 4.dp),
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                                        .padding(top = 6.dp),
+                                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                                    border = androidx.compose.foundation.BorderStroke(2.dp, Color.Black),
+                                    shape = RoundedCornerShape(4.dp)
                                 ) {
                                     Column(modifier = Modifier.padding(4.dp)) {
                                         if (pairedPrinters.isEmpty()) {
                                             Text(
-                                                text = "Tidak ada printer Bluetooth dipasang. Hubungkan dulu di Pengaturan Bluetooth HP.",
+                                                text = "TIDAK ADA PRINTER BLUETOOTH DIPASANG. HUBUNGKAN DULU DI PENGATURAN BLUETOOTH HP.",
                                                 style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.error,
+                                                color = Color.Red,
+                                                fontWeight = FontWeight.Black,
                                                 modifier = Modifier.padding(8.dp)
                                             )
                                         } else {
@@ -388,26 +444,28 @@ fun PaymentScreen(
                                                 ) {
                                                     Column {
                                                         Text(
-                                                            text = printer.device.name ?: "Unknown Printer",
+                                                            text = (printer.device.name ?: "Unknown Printer").uppercase(Locale.getDefault()),
                                                             style = MaterialTheme.typography.bodyMedium,
-                                                            fontWeight = FontWeight.Bold
+                                                            fontWeight = FontWeight.Black,
+                                                            color = Color.Black
                                                         )
                                                         Text(
                                                             text = printer.device.address,
                                                             style = MaterialTheme.typography.labelSmall,
-                                                            color = MaterialTheme.colorScheme.outline
+                                                            color = Color.DarkGray,
+                                                            fontWeight = FontWeight.Bold
                                                         )
                                                     }
                                                     if (selectedPrinterAddress == printer.device.address) {
                                                         Icon(
                                                             imageVector = Icons.Default.Done,
                                                             contentDescription = "Terpilih",
-                                                            tint = MaterialTheme.colorScheme.primary,
-                                                            modifier = Modifier.size(16.dp)
+                                                            tint = Color.Black,
+                                                            modifier = Modifier.size(18.dp)
                                                         )
                                                     }
                                                 }
-                                                HorizontalDivider(color = Color.LightGray.copy(alpha = 0.3f), thickness = 0.5.dp)
+                                                HorizontalDivider(color = Color.Black.copy(alpha = 0.2f), thickness = 1.dp)
                                             }
                                         }
                                     }
@@ -418,57 +476,84 @@ fun PaymentScreen(
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    // Pay & Checkout Action Validation
+                    // Selesaikan Button with hard shadow
                     val cashAmount = calcVM.cashPaidAmount.toDoubleOrNull() ?: 0.0
                     val isCashValid = calcVM.currentPaymentMethod == "CASH" && cashAmount >= totalAmount
                     val isQrisValid = calcVM.currentPaymentMethod == "QRIS"
+                    val canPay = calcVM.currentPaymentMethod.isNotEmpty() && (isCashValid || isQrisValid)
 
-                    Button(
-                        onClick = {
-                            val draftDate = orderVM.draftOrders.value.find { it.order.id == orderId }?.order?.createdAt ?: System.currentTimeMillis()
-                            val prefs = context.getSharedPreferences("pos_settings", android.content.Context.MODE_PRIVATE)
-                            val isPrinterActive = prefs.getBoolean("is_printer_active", false)
-                            if (isPrinterActive) {
-                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                                    val connectPerm = android.Manifest.permission.BLUETOOTH_CONNECT
-                                    val scanPerm = android.Manifest.permission.BLUETOOTH_SCAN
-                                    val isConnectGranted = androidx.core.content.ContextCompat.checkSelfPermission(context, connectPerm) == android.content.pm.PackageManager.PERMISSION_GRANTED
-                                    val isScanGranted = androidx.core.content.ContextCompat.checkSelfPermission(context, scanPerm) == android.content.pm.PackageManager.PERMISSION_GRANTED
-                                    if (!isConnectGranted || !isScanGranted) {
-                                        bluetoothPermissionLauncher.launch(arrayOf(connectPerm, scanPerm))
-                                    } else {
-                                        printReceipt(context, orderVM, calcVM, draftDate, selectedPrinterAddress)
-                                    }
-                                } else {
-                                    printReceipt(context, orderVM, calcVM, draftDate, selectedPrinterAddress)
-                                }
-                            }
-
-                            calcVM.checkout(orderId) {
-                                Toast.makeText(context, "Pembayaran Berhasil Diselesaikan!", Toast.LENGTH_LONG).show()
-                                orderVM.clearCart()
-                                calcVM.prepareCheckout(0.0)
-                                calcVM.onKeyPress("C")
-                                onNavigateBack()
-                            }
-                        },
-                        enabled = calcVM.currentPaymentMethod.isNotEmpty() && (isCashValid || isQrisValid),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF2E7D32),
-                            contentColor = Color.White
-                        ),
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp)
+                            .height(52.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Done,
-                            contentDescription = "Selesai",
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("SELESAIKAN PEMBAYARAN", style = MaterialTheme.typography.labelMedium)
+                        if (canPay) {
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .offset(x = 4.dp, y = 4.dp)
+                                    .background(Color.Black, RoundedCornerShape(4.dp))
+                            )
+                        }
+                        
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .background(
+                                    if (canPay) Color(0xFF00F5D4) else Color.LightGray.copy(alpha = 0.5f),
+                                    RoundedCornerShape(4.dp)
+                                )
+                                .border(
+                                    2.5.dp,
+                                    if (canPay) Color.Black else Color.Gray,
+                                    RoundedCornerShape(4.dp)
+                                )
+                                .clickable(enabled = canPay) {
+                                    val draftDate = orderVM.draftOrders.value.find { it.order.id == orderId }?.order?.createdAt ?: System.currentTimeMillis()
+                                    val prefs = context.getSharedPreferences("pos_settings", android.content.Context.MODE_PRIVATE)
+                                    val isPrinterActive = prefs.getBoolean("is_printer_active", false)
+                                    if (isPrinterActive) {
+                                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                                            val connectPerm = android.Manifest.permission.BLUETOOTH_CONNECT
+                                            val scanPerm = android.Manifest.permission.BLUETOOTH_SCAN
+                                            val isConnectGranted = androidx.core.content.ContextCompat.checkSelfPermission(context, connectPerm) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                                            val isScanGranted = androidx.core.content.ContextCompat.checkSelfPermission(context, scanPerm) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                                            if (!isConnectGranted || !isScanGranted) {
+                                                bluetoothPermissionLauncher.launch(arrayOf(connectPerm, scanPerm))
+                                            } else {
+                                                printReceipt(context, orderVM, calcVM, draftDate, selectedPrinterAddress)
+                                            }
+                                        } else {
+                                            printReceipt(context, orderVM, calcVM, draftDate, selectedPrinterAddress)
+                                        }
+                                    }
+
+                                    calcVM.checkout(orderId) {
+                                        Toast.makeText(context, "Pembayaran Berhasil Diselesaikan!", Toast.LENGTH_LONG).show()
+                                        orderVM.clearCart()
+                                        calcVM.prepareCheckout(0.0)
+                                        calcVM.onKeyPress("C")
+                                        onNavigateBack()
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Done,
+                                    contentDescription = "Selesai",
+                                    tint = if (canPay) Color.Black else Color.Gray,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "SELESAIKAN PEMBAYARAN", 
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Black,
+                                    color = if (canPay) Color.Black else Color.Gray
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -479,120 +564,152 @@ fun PaymentScreen(
                     .fillMaxSize()
                     .padding(innerPadding)
                     .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .padding(start = 16.dp, end = 22.dp, top = 0.dp, bottom = 24.dp)
             ) {
-                // Receipt Context Indicator
-                Row(
+                // Receipt Context Indicator (Brutalist Banner)
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(vertical = 12.dp)
+                        .background(Color(0xFFE8D5FF))
+                        .border(2.5.dp, Color.Black, RoundedCornerShape(4.dp))
+                        .padding(12.dp)
                 ) {
-                    Icon(Icons.Default.Info, contentDescription = "Info", tint = MaterialTheme.colorScheme.primary)
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = "Draft: $currentOrderName (${orderVM.cartItemCount} item)",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Info, contentDescription = "Info", tint = Color.Black)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = "DRAFT: ${currentOrderName.uppercase(Locale.getDefault())} (${orderVM.cartItemCount} ITEM)",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Black,
+                            color = Color.Black
+                        )
+                    }
                 }
 
                 // MUNCULKAN LIST BARANG YANG DIBELI/PESAN UNTUK PEMBAYARAN (PORTRAIT)
-                Card(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(220.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        .height(230.dp)
+                        .padding(bottom = 8.dp, end = 8.dp) // Shadow
                 ) {
-                    LazyColumn(
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .offset(x = 6.dp, y = 6.dp)
+                            .background(Color.Black, RoundedCornerShape(4.dp))
+                    )
+                    
+                    Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(Color.White)
+                            .border(3.dp, Color.Black, RoundedCornerShape(4.dp))
+                            .padding(12.dp)
                     ) {
-                        items(orderVM.cart) { item ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "RINCIAN BELANJA",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Black,
+                            color = Color.Black
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(orderVM.cart) { item ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = item.product.name.uppercase(Locale.getDefault()),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Black,
+                                            color = Color.Black
+                                        )
+                                        Text(
+                                            text = "${item.qty} X RP ${String.format(Locale.getDefault(), "%,.0f", item.product.price)}",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = Color.DarkGray,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
                                     Text(
-                                        text = item.product.name,
+                                        text = "Rp ${String.format(Locale.getDefault(), "%,.0f", item.product.price * item.qty)}",
                                         style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                    Text(
-                                        text = "${item.qty} x Rp ${String.format(Locale.getDefault(), "%,.0f", item.product.price)}",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.outline
+                                        fontWeight = FontWeight.Black,
+                                        color = Color.Black
                                     )
                                 }
-                                Text(
-                                    text = "Rp ${String.format(Locale.getDefault(), "%,.0f", item.product.price * item.qty)}",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
+                                HorizontalDivider(color = Color.Black.copy(alpha = 0.2f), thickness = 1.dp)
                             }
-                            HorizontalDivider(color = Color.LightGray.copy(alpha = 0.3f), thickness = 0.5.dp)
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 // Active Checkout Workspace
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Color(0xFFEADDFF).copy(alpha = 0.35f))
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFFFFDE4D).copy(alpha = 0.25f))
+                        .border(3.dp, Color.Black, RoundedCornerShape(12.dp))
                         .padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Text(
-                        text = "Metode Pembayaran",
+                        text = "METODE PEMBAYARAN",
                         style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
+                        color = Color.Black,
+                        fontWeight = FontWeight.Black
                     )
 
-                    // Price To Pay Display
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    // Price Display Card with shadow
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 6.dp, end = 6.dp)
                     ) {
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .offset(x = 5.dp, y = 5.dp)
+                                .background(Color.Black, RoundedCornerShape(4.dp))
+                        )
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .background(Color(0xFFFFDE4D), RoundedCornerShape(4.dp))
+                                .border(2.5.dp, Color.Black, RoundedCornerShape(4.dp))
                                 .padding(16.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
                                 text = "TOTAL YANG HARUS DIBAYAR",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.outline,
-                                fontWeight = FontWeight.Bold
+                                color = Color.Black,
+                                fontWeight = FontWeight.Black
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = "Rp ${String.format(Locale.getDefault(), "%,.0f", totalAmount)}",
                                 style = MaterialTheme.typography.headlineLarge,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Bold
+                                color = Color.Black,
+                                fontWeight = FontWeight.Black
                             )
                         }
                     }
 
-                    // Checkout Select Mode
+                    // Checkout Select Mode Buttons
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -618,7 +735,7 @@ fun PaymentScreen(
                         )
                     }
 
-                    // Dynamic Form based on chosen payment method (Cash / QRIS dinamis)
+                    // Dynamic Form based on chosen payment method
                     Box(modifier = Modifier.fillMaxWidth()) {
                         if (calcVM.currentPaymentMethod == "CASH") {
                             CashPaymentPanel(calcVM, totalAmount)
@@ -627,7 +744,7 @@ fun PaymentScreen(
                         }
                     }
 
-                    // Printer Selector (shown only if printer is active in settings) - Portrait
+                    // Printer Selector - Portrait
                     val isPrinterActive = remember { prefs.getBoolean("is_printer_active", false) }
                     if (isPrinterActive) {
                         Column(
@@ -636,12 +753,12 @@ fun PaymentScreen(
                                 .padding(vertical = 4.dp)
                         ) {
                             Text(
-                                text = "Printer Bluetooth Terpilih:",
+                                text = "PRINTER BLUETOOTH TERPILIH:",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.outline,
-                                fontWeight = FontWeight.Bold
+                                color = Color.Black,
+                                fontWeight = FontWeight.Black
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(6.dp))
                             
                             val currentPrinterName = pairedPrinters.find { it.device.address == selectedPrinterAddress }?.device?.name 
                                 ?: if (selectedPrinterAddress.isNotEmpty()) "Printer Terputus ($selectedPrinterAddress)" else "Belum Memilih Printer (Tap Pilih)"
@@ -649,9 +766,9 @@ fun PaymentScreen(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(MaterialTheme.colorScheme.surface)
-                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(Color.White)
+                                    .border(2.dp, Color.Black, RoundedCornerShape(4.dp))
                                     .clickable { showPrinterDropdown = !showPrinterDropdown }
                                     .padding(horizontal = 12.dp, vertical = 10.dp)
                             ) {
@@ -661,15 +778,15 @@ fun PaymentScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = currentPrinterName,
+                                        text = currentPrinterName.uppercase(Locale.getDefault()),
                                         style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurface
+                                        fontWeight = FontWeight.Black,
+                                        color = Color.Black
                                     )
                                     Icon(
                                         imageVector = if (showPrinterDropdown) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                                         contentDescription = "Pilih Printer",
-                                        tint = MaterialTheme.colorScheme.primary
+                                        tint = Color.Black
                                     )
                                 }
                             }
@@ -678,17 +795,19 @@ fun PaymentScreen(
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(top = 4.dp),
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                                        .padding(top = 6.dp),
+                                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                                    border = androidx.compose.foundation.BorderStroke(2.dp, Color.Black),
+                                    shape = RoundedCornerShape(4.dp)
                                 ) {
                                     Column(modifier = Modifier.padding(4.dp)) {
                                         if (pairedPrinters.isEmpty()) {
                                             Text(
-                                                text = "Tidak ada printer Bluetooth dipasang. Hubungkan dulu di Pengaturan Bluetooth HP.",
+                                                text = "TIDAK ADA PRINTER BLUETOOTH DIPASANG. HUBUNGKAN DULU DI PENGATURAN BLUETOOTH HP.",
                                                 style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.error,
+                                                color = Color.Red,
+                                                fontWeight = FontWeight.Black,
                                                 modifier = Modifier.padding(8.dp)
                                             )
                                         } else {
@@ -707,26 +826,28 @@ fun PaymentScreen(
                                                 ) {
                                                     Column {
                                                         Text(
-                                                            text = printer.device.name ?: "Unknown Printer",
+                                                            text = (printer.device.name ?: "Unknown Printer").uppercase(Locale.getDefault()),
                                                             style = MaterialTheme.typography.bodyMedium,
-                                                            fontWeight = FontWeight.Bold
+                                                            fontWeight = FontWeight.Black,
+                                                            color = Color.Black
                                                         )
                                                         Text(
                                                             text = printer.device.address,
                                                             style = MaterialTheme.typography.labelSmall,
-                                                            color = MaterialTheme.colorScheme.outline
+                                                            color = Color.DarkGray,
+                                                            fontWeight = FontWeight.Bold
                                                         )
                                                     }
                                                     if (selectedPrinterAddress == printer.device.address) {
                                                         Icon(
                                                             imageVector = Icons.Default.Done,
                                                             contentDescription = "Terpilih",
-                                                            tint = MaterialTheme.colorScheme.primary,
-                                                            modifier = Modifier.size(16.dp)
+                                                            tint = Color.Black,
+                                                            modifier = Modifier.size(18.dp)
                                                         )
                                                     }
                                                 }
-                                                HorizontalDivider(color = Color.LightGray.copy(alpha = 0.3f), thickness = 0.5.dp)
+                                                HorizontalDivider(color = Color.Black.copy(alpha = 0.2f), thickness = 1.dp)
                                             }
                                         }
                                     }
@@ -737,53 +858,84 @@ fun PaymentScreen(
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    // Pay & Checkout Action
+                    // Selesaikan Button - Portrait
                     val cashAmount = calcVM.cashPaidAmount.toDoubleOrNull() ?: 0.0
                     val isCashValid = calcVM.currentPaymentMethod == "CASH" && cashAmount >= totalAmount
                     val isQrisValid = calcVM.currentPaymentMethod == "QRIS"
+                    val canPay = calcVM.currentPaymentMethod.isNotEmpty() && (isCashValid || isQrisValid)
 
-                    Button(
-                        onClick = {
-                            val draftDate = orderVM.draftOrders.value.find { it.order.id == orderId }?.order?.createdAt ?: System.currentTimeMillis()
-                            val prefs = context.getSharedPreferences("pos_settings", android.content.Context.MODE_PRIVATE)
-                            val isPrinterActive = prefs.getBoolean("is_printer_active", false)
-                            if (isPrinterActive) {
-                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                                    val connectPerm = android.Manifest.permission.BLUETOOTH_CONNECT
-                                    val scanPerm = android.Manifest.permission.BLUETOOTH_SCAN
-                                    val isConnectGranted = androidx.core.content.ContextCompat.checkSelfPermission(context, connectPerm) == android.content.pm.PackageManager.PERMISSION_GRANTED
-                                    val isScanGranted = androidx.core.content.ContextCompat.checkSelfPermission(context, scanPerm) == android.content.pm.PackageManager.PERMISSION_GRANTED
-                                    if (!isConnectGranted || !isScanGranted) {
-                                        bluetoothPermissionLauncher.launch(arrayOf(connectPerm, scanPerm))
-                                    } else {
-                                        printReceipt(context, orderVM, calcVM, draftDate, selectedPrinterAddress)
-                                    }
-                                } else {
-                                    printReceipt(context, orderVM, calcVM, draftDate, selectedPrinterAddress)
-                                }
-                            }
-
-                            calcVM.checkout(orderId) {
-                                Toast.makeText(context, "Pembayaran Berhasil Diselesaikan!", Toast.LENGTH_LONG).show()
-                                orderVM.clearCart()
-                                calcVM.prepareCheckout(0.0)
-                                calcVM.onKeyPress("C")
-                                onNavigateBack()
-                            }
-                        },
-                        enabled = calcVM.currentPaymentMethod.isNotEmpty() && (isCashValid || isQrisValid),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF2E7D32),
-                            contentColor = Color.White
-                        ),
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp)
                     ) {
-                        Icon(Icons.Default.Done, contentDescription = "Selesai")
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("SELESAIKAN PEMBAYARAN", style = MaterialTheme.typography.labelLarge)
+                        if (canPay) {
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .offset(x = 4.dp, y = 4.dp)
+                                    .background(Color.Black, RoundedCornerShape(4.dp))
+                            )
+                        }
+                        
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .background(
+                                    if (canPay) Color(0xFF00F5D4) else Color.LightGray.copy(alpha = 0.5f),
+                                    RoundedCornerShape(4.dp)
+                                )
+                                .border(
+                                    2.5.dp,
+                                    if (canPay) Color.Black else Color.Gray,
+                                    RoundedCornerShape(4.dp)
+                                )
+                                .clickable(enabled = canPay) {
+                                    val draftDate = orderVM.draftOrders.value.find { it.order.id == orderId }?.order?.createdAt ?: System.currentTimeMillis()
+                                    val prefs = context.getSharedPreferences("pos_settings", android.content.Context.MODE_PRIVATE)
+                                    val isPrinterActive = prefs.getBoolean("is_printer_active", false)
+                                    if (isPrinterActive) {
+                                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                                            val connectPerm = android.Manifest.permission.BLUETOOTH_CONNECT
+                                            val scanPerm = android.Manifest.permission.BLUETOOTH_SCAN
+                                            val isConnectGranted = androidx.core.content.ContextCompat.checkSelfPermission(context, connectPerm) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                                            val isScanGranted = androidx.core.content.ContextCompat.checkSelfPermission(context, scanPerm) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                                            if (!isConnectGranted || !isScanGranted) {
+                                                bluetoothPermissionLauncher.launch(arrayOf(connectPerm, scanPerm))
+                                            } else {
+                                                printReceipt(context, orderVM, calcVM, draftDate, selectedPrinterAddress)
+                                            }
+                                        } else {
+                                            printReceipt(context, orderVM, calcVM, draftDate, selectedPrinterAddress)
+                                        }
+                                    }
+
+                                    calcVM.checkout(orderId) {
+                                        Toast.makeText(context, "Pembayaran Berhasil Diselesaikan!", Toast.LENGTH_LONG).show()
+                                        orderVM.clearCart()
+                                        calcVM.prepareCheckout(0.0)
+                                        calcVM.onKeyPress("C")
+                                        onNavigateBack()
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Done,
+                                    contentDescription = "Selesai",
+                                    tint = if (canPay) Color.Black else Color.Gray,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "SELESAIKAN PEMBAYARAN", 
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Black,
+                                    color = if (canPay) Color.Black else Color.Gray
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -852,28 +1004,44 @@ fun CashPaymentPanel(calcVM: CalculatorViewModel, totalAmount: Double) {
                 val filtered = newVal.filter { it.isDigit() }
                 calcVM.cashPaidAmount = filtered
             },
-            label = { Text("Jumlah Uang Diterima", style = MaterialTheme.typography.labelSmall) },
-            prefix = { Text("Rp ", style = MaterialTheme.typography.bodyMedium) },
+            label = { Text("Jumlah Uang Diterima", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Bold) },
+            prefix = { Text("Rp ", style = MaterialTheme.typography.bodyMedium, color = Color.Black, fontWeight = FontWeight.Bold) },
             visualTransformation = remember { RupiahVisualTransformation() },
-            shape = RoundedCornerShape(8.dp),
+            shape = RoundedCornerShape(4.dp),
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             isError = isCashInsufficient,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = if (isCashInsufficient) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor = if (isCashInsufficient) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outlineVariant
+                focusedBorderColor = Color.Black,
+                unfocusedBorderColor = Color.Black,
+                focusedLabelColor = Color.Black,
+                unfocusedLabelColor = Color.Black,
+                focusedTextColor = Color.Black,
+                unfocusedTextColor = Color.Black,
+                focusedContainerColor = Color.White,
+                unfocusedContainerColor = Color.White,
+                errorBorderColor = Color(0xFFFF595E),
+                errorContainerColor = Color.White
             )
         )
 
         if (isCashInsufficient) {
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Jumlah uang kurang! Silakan masukkan nominal yang mencukupi.",
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold
-            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFFFF595E))
+                    .border(2.dp, Color.Black, RoundedCornerShape(2.dp))
+                    .padding(8.dp)
+            ) {
+                Text(
+                    text = "Jumlah uang kurang! Silakan masukkan nominal yang mencukupi.",
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Black
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -887,18 +1055,30 @@ fun CashPaymentPanel(calcVM: CalculatorViewModel, totalAmount: Double) {
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(MaterialTheme.colorScheme.surface)
-                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(6.dp))
+                        .padding(bottom = 3.dp, end = 3.dp)
                         .clickable { calcVM.cashPaidAmount = amount }
-                        .padding(vertical = 8.dp),
-                    contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = "Rp ${String.format(Locale.getDefault(), "%,.0f", amount.toDouble())}",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.SemiBold
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .offset(x = 3.dp, y = 3.dp)
+                            .background(Color.Black, RoundedCornerShape(4.dp))
                     )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color.White, RoundedCornerShape(4.dp))
+                            .border(2.dp, Color.Black, RoundedCornerShape(4.dp))
+                            .padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Rp ${String.format(Locale.getDefault(), "%,.0f", amount.toDouble())}",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Black,
+                            color = Color.Black
+                        )
+                    }
                 }
             }
         }
@@ -907,27 +1087,39 @@ fun CashPaymentPanel(calcVM: CalculatorViewModel, totalAmount: Double) {
 
         // Auto change display
         if (calcVM.cashPaidAmount.isNotEmpty() && !isCashInsufficient) {
-            Row(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFFE2F0D9)) // Soft success green container
-                    .padding(12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(bottom = 4.dp, end = 4.dp)
             ) {
-                Text(
-                    text = "KEMBALIAN:",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color(0xFF2E7D32),
-                    fontWeight = FontWeight.Bold
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .offset(x = 4.dp, y = 4.dp)
+                        .background(Color.Black, RoundedCornerShape(4.dp))
                 )
-                Text(
-                    text = "Rp ${String.format(Locale.getDefault(), "%,.0f", cashAmount - totalAmount)}",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = Color(0xFF2E7D32),
-                    fontWeight = FontWeight.Bold
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF00F5D4), RoundedCornerShape(4.dp))
+                        .border(2.dp, Color.Black, RoundedCornerShape(4.dp))
+                        .padding(12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "KEMBALIAN:",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.Black,
+                        fontWeight = FontWeight.Black
+                    )
+                    Text(
+                        text = "Rp ${String.format(Locale.getDefault(), "%,.0f", cashAmount - totalAmount)}",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Color.Black,
+                        fontWeight = FontWeight.Black
+                    )
+                }
             }
         }
     }
@@ -944,36 +1136,61 @@ fun QrisPaymentPanel(calcVM: CalculatorViewModel, totalAmount: Double) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         if (calcVM.activeQrisString.isEmpty() && !calcVM.isQrisLoading) {
-            Text(
-                text = "QRIS Master Belum Dikonfigurasi! Silakan tambahkan string QRIS di menu Pengaturan.",
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.labelSmall,
-                textAlign = TextAlign.Center
-            )
-        } else {
-            Button(
-                onClick = { 
-                    showQrModal = true 
-                },
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ),
-                modifier = Modifier.fillMaxWidth()
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFFFF595E))
+                    .border(2.dp, Color.Black, RoundedCornerShape(2.dp))
+                    .padding(12.dp)
             ) {
-                Icon(Icons.Default.Refresh, contentDescription = "Tampilkan QRIS")
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("TAMPILKAN BARCODE QRIS", style = MaterialTheme.typography.labelLarge)
+                Text(
+                    text = "QRIS Master Belum Dikonfigurasi! Silakan tambahkan string QRIS di menu Pengaturan.",
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelSmall,
+                    textAlign = TextAlign.Center,
+                    fontWeight = FontWeight.Black
+                )
+            }
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp)
+                    .clickable { showQrModal = true }
+            ) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .offset(x = 4.dp, y = 4.dp)
+                        .background(Color.Black, RoundedCornerShape(4.dp))
+                )
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .background(Color(0xFFE8D5FF), RoundedCornerShape(4.dp))
+                        .border(2.dp, Color.Black, RoundedCornerShape(4.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Tampilkan QRIS", tint = Color.Black)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "TAMPILKAN BARCODE QRIS",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = Color.Black,
+                            fontWeight = FontWeight.Black
+                        )
+                    }
+                }
             }
             
             Spacer(modifier = Modifier.height(12.dp))
             
             Text(
-                text = "Merchant: ${calcVM.merchantName}",
+                text = "Merchant: ${calcVM.merchantName.uppercase(Locale.getDefault())}",
                 style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+                fontWeight = FontWeight.Black,
+                color = Color.Black
             )
         }
     }
@@ -995,24 +1212,34 @@ fun PaymentMethodSelectorCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val borderColors = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
-    val backgroundColors = if (isActive) Color(0xFFEADDFF).copy(alpha = 0.5f) else MaterialTheme.colorScheme.surface
+    val backgroundColors = if (isActive) Color(0xFFFFDE4D) else Color.White
 
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(backgroundColors)
-            .border(if (isActive) 2.dp else 1.dp, borderColors, RoundedCornerShape(8.dp))
+            .padding(bottom = 4.dp, end = 4.dp)
             .clickable { onClick() }
-            .padding(16.dp),
-        contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.labelLarge,
-            color = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-            fontWeight = FontWeight.Bold
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .offset(x = 4.dp, y = 4.dp)
+                .background(Color.Black, RoundedCornerShape(4.dp))
         )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(backgroundColors, RoundedCornerShape(4.dp))
+                .border(2.dp, Color.Black, RoundedCornerShape(4.dp))
+                .padding(vertical = 12.dp, horizontal = 8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelLarge,
+                color = Color.Black,
+                fontWeight = FontWeight.Black
+            )
+        }
     }
 }
 
@@ -1024,43 +1251,66 @@ fun QrisQrCodeModal(
     onDismiss: () -> Unit
 ) {
     Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = Color.White,
+        Box(
             modifier = Modifier
                 .width(360.dp)
-                .padding(8.dp)
+                .padding(bottom = 6.dp, end = 6.dp)
         ) {
+            // Shadow
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .offset(x = 6.dp, y = 6.dp)
+                    .background(Color.Black, RoundedCornerShape(8.dp))
+            )
+            // Content
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .background(Color.White, RoundedCornerShape(8.dp))
+                    .border(3.dp, Color.Black, RoundedCornerShape(8.dp))
                     .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Header GPN/QRIS
-                Text(
-                    text = "QRIS DINAMIS",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = Color.Red,
-                    fontWeight = FontWeight.Bold
-                )
+                Box(
+                    modifier = Modifier
+                        .background(Color(0xFFFF595E))
+                        .border(2.dp, Color.Black, RoundedCornerShape(2.dp))
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = "QRIS DINAMIS",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White,
+                        fontWeight = FontWeight.Black
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
                 Text(
                     text = merchant.uppercase(Locale.getDefault()),
                     style = MaterialTheme.typography.bodyLarge,
-                    color = Color.DarkGray,
-                    fontWeight = FontWeight.Bold
+                    color = Color.Black,
+                    fontWeight = FontWeight.Black
                 )
                 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // QR Image
-                Image(
-                    bitmap = bitmap.asImageBitmap(),
-                    contentDescription = "QRIS Dynamic Barcode",
+                Box(
                     modifier = Modifier
-                        .size(240.dp)
-                        .border(1.dp, Color.LightGray)
-                )
+                        .border(3.dp, Color.Black, RoundedCornerShape(4.dp))
+                        .padding(8.dp)
+                        .background(Color.White)
+                ) {
+                    Image(
+                        bitmap = bitmap.asImageBitmap(),
+                        contentDescription = "QRIS Dynamic Barcode",
+                        modifier = Modifier.size(220.dp)
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -1068,28 +1318,44 @@ fun QrisQrCodeModal(
                 Text(
                     text = "TOTAL TAGIHAN",
                     style = MaterialTheme.typography.labelSmall,
-                    color = Color.Gray,
-                    fontWeight = FontWeight.Bold
+                    color = Color.Black,
+                    fontWeight = FontWeight.Black
                 )
                 Text(
                     text = "Rp ${String.format(Locale.getDefault(), "%,.0f", amount)}",
-                    style = MaterialTheme.typography.headlineLarge,
+                    style = MaterialTheme.typography.titleLarge,
                     color = Color.Black,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Black
                 )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
-                Button(
-                    onClick = onDismiss,
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = Color.White
-                    ),
-                    modifier = Modifier.fillMaxWidth()
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .clickable { onDismiss() }
                 ) {
-                    Text("OK, SUDAH DI-SCAN", style = MaterialTheme.typography.labelLarge)
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .offset(x = 4.dp, y = 4.dp)
+                            .background(Color.Black, RoundedCornerShape(4.dp))
+                    )
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .background(Color(0xFF00F5D4), RoundedCornerShape(4.dp))
+                            .border(2.dp, Color.Black, RoundedCornerShape(4.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "OK, SUDAH DI-SCAN",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = Color.Black,
+                            fontWeight = FontWeight.Black
+                        )
+                    }
                 }
             }
         }
