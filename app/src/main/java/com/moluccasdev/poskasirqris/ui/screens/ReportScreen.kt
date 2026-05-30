@@ -1383,8 +1383,6 @@ fun printReprintReceipt(
         textToPrint.append("[C]--------------------------------\n")
         textToPrint.append("[L]<b>TOTAL[R]Rp ${String.format(java.util.Locale.getDefault(), "%,.0f", reportItem.transaction.totalAmount)}</b>\n")
         textToPrint.append("[C]================================\n")
-        textToPrint.append("[C]Terima Kasih atas\n")
-        textToPrint.append("[C]Kunjungan Anda!\n")
         
         // Multi-line center footer
         storeFooter.split("\n").forEach { line ->

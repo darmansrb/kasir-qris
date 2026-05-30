@@ -1463,8 +1463,6 @@ fun printReceipt(
         }
 
         textToPrint.append("[C]================================\n")
-        textToPrint.append("[C]Terima Kasih atas\n")
-        textToPrint.append("[C]Kunjungan Anda!\n")
         
         // Multi-line center footer
         storeFooter.split("\n").forEach { line ->

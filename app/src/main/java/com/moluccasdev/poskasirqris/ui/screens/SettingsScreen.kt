@@ -1579,17 +1579,55 @@ fun ConfigSettingsTab(context: android.content.Context) {
                                     if (bluetoothConnection == null) {
                                         Toast.makeText(context, "Printer Bluetooth tidak terhubung / terpasang!", Toast.LENGTH_LONG).show()
                                     } else {
+                                        val storeName = prefs.getString("store_name", "POS KASIR QRIS") ?: "POS KASIR QRIS"
+                                        val storeFooter = prefs.getString("store_footer", "Layanan POS Kasir QRIS Offline") ?: "Layanan POS Kasir QRIS Offline"
+                                        val logoUriString = prefs.getString("store_logo_uri", "") ?: ""
+
                                         val printer = com.dantsu.escposprinter.EscPosPrinter(bluetoothConnection, 203, 48f, 32)
                                         val textToPrint = StringBuilder()
-                                        textToPrint.append("[C]<b><font size='big'>TEST PRINT DUMMY</font></b>\n")
-                                        textToPrint.append("[C]Printer Thermal Bluetooth Berhasil\n")
+
+                                        // 1. Logo Toko printing (if Uri is saved and can be parsed)
+                                        var logoPrinted = false
+                                        if (logoUriString.isNotEmpty()) {
+                                            try {
+                                                val uri = android.net.Uri.parse(logoUriString)
+                                                val inputStream = context.contentResolver.openInputStream(uri)
+                                                val originalBitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
+                                                inputStream?.close()
+                                                if (originalBitmap != null) {
+                                                    val width = 180
+                                                    val height = (originalBitmap.height * (width.toDouble() / originalBitmap.width)).toInt()
+                                                    val resizedBitmap = android.graphics.Bitmap.createScaledBitmap(originalBitmap, width, height, true)
+                                                    
+                                                    textToPrint.append("[C]<img>" + com.dantsu.escposprinter.textparser.PrinterTextParserImg.bitmapToHexadecimalString(printer, resizedBitmap) + "</img>\n")
+                                                    logoPrinted = true
+                                                }
+                                            } catch (e: Exception) {
+                                                e.printStackTrace()
+                                            }
+                                        }
+
+                                        if (!logoPrinted) {
+                                            textToPrint.append("[C]<b><font size='big'>${storeName.uppercase(java.util.Locale.getDefault())}</font></b>\n")
+                                        } else {
+                                            textToPrint.append("[C]<b>${storeName.uppercase(java.util.Locale.getDefault())}</b>\n")
+                                        }
+
+                                        textToPrint.append("[C]================================\n")
+                                        textToPrint.append("[C]TEST PRINTER THERMAL BERHASIL\n")
                                         textToPrint.append("[C]================================\n")
                                         textToPrint.append("[L]Tgl Test : ${java.text.SimpleDateFormat("dd MMM yyyy, HH:mm", java.util.Locale.getDefault()).format(java.util.Date())}\n")
                                         textToPrint.append("[L]Printer  : ${bluetoothConnection.device.name ?: "Unknown"}\n")
                                         textToPrint.append("[L]Alamat   : ${bluetoothConnection.device.address}\n")
                                         textToPrint.append("[C]--------------------------------\n")
-                                        textToPrint.append("[C]Koneksi printer thermal berjalan!\n")
-                                        textToPrint.append("[C]POS KASIR QRIS OFFLINE\n\n\n")
+                                        
+                                        // Multi-line center footer
+                                        storeFooter.split("\n").forEach { line ->
+                                            if (line.trim().isNotEmpty()) {
+                                                textToPrint.append("[C]${line.trim()}\n")
+                                            }
+                                        }
+                                        textToPrint.append("\n\n\n")
 
                                         printer.printFormattedText(textToPrint.toString())
                                         Toast.makeText(context, "Test print berhasil dikirim ke printer!", Toast.LENGTH_SHORT).show()
