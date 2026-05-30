@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Info
@@ -737,24 +738,70 @@ fun ReportScreen(reportVM: ReportViewModel) {
                 // Transaction list header + Pagination in Portrait
                 item {
                     Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Riwayat Transaksi".uppercase(Locale.getDefault()),
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = Color.Black,
-                            fontWeight = FontWeight.Black
-                        )
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Riwayat Transaksi".uppercase(Locale.getDefault()),
+                                style = MaterialTheme.typography.titleMedium, // Dikecilkan dari headlineSmall ke titleMedium
+                                color = Color.Black,
+                                fontWeight = FontWeight.Black
+                            )
 
-                        // Pagination Controls
+                            // Pagination Controls (Kiri & Kanan saja untuk keterbacaan)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                // Prev Button
+                                Box(
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .background(if (currentPage > 1) Color.White else Color.LightGray.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
+                                        .border(1.5.dp, Color.Black, RoundedCornerShape(4.dp))
+                                        .clickable(enabled = currentPage > 1) { currentPage-- },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(imageVector = Icons.Default.KeyboardArrowLeft, contentDescription = "Prev", modifier = Modifier.size(16.dp), tint = Color.Black)
+                                }
+
+                                Text(
+                                    text = "$currentPage/$totalPages",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Black,
+                                    color = Color.Black
+                                )
+
+                                // Next Button
+                                Box(
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .background(if (currentPage < totalPages) Color.White else Color.LightGray.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
+                                        .border(1.5.dp, Color.Black, RoundedCornerShape(4.dp))
+                                        .clickable(enabled = currentPage < totalPages) { currentPage++ },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(imageVector = Icons.Default.KeyboardArrowRight, contentDescription = "Next", modifier = Modifier.size(16.dp), tint = Color.Black)
+                                }
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        // Pilihan jumlah pagination dipindahkan ke bawah judul secara jelas
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            // Size Selector Dropdown
+                            Text(
+                                text = "TAMPILKAN:",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Black,
+                                color = Color.Black
+                            )
                             Box {
                                 Box(
                                     modifier = Modifier
@@ -764,7 +811,7 @@ fun ReportScreen(reportVM: ReportViewModel) {
                                         .padding(horizontal = 8.dp, vertical = 4.dp)
                                 ) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(text = "$pageSize", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Black, color = Color.Black)
+                                        Text(text = "$pageSize TRANSAKSI", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Black, color = Color.Black)
                                         Icon(imageVector = Icons.Default.KeyboardArrowDown, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color.Black)
                                     }
                                 }
@@ -782,37 +829,6 @@ fun ReportScreen(reportVM: ReportViewModel) {
                                         )
                                     }
                                 }
-                            }
-
-                            // Prev Button
-                            Box(
-                                modifier = Modifier
-                                    .size(28.dp)
-                                    .background(if (currentPage > 1) Color.White else Color.LightGray.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
-                                    .border(1.5.dp, Color.Black, RoundedCornerShape(4.dp))
-                                    .clickable(enabled = currentPage > 1) { currentPage-- },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(imageVector = Icons.Default.KeyboardArrowLeft, contentDescription = "Prev", modifier = Modifier.size(16.dp), tint = Color.Black)
-                            }
-
-                            Text(
-                                text = "$currentPage/$totalPages",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Black,
-                                color = Color.Black
-                            )
-
-                            // Next Button
-                            Box(
-                                modifier = Modifier
-                                    .size(28.dp)
-                                    .background(if (currentPage < totalPages) Color.White else Color.LightGray.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
-                                    .border(1.5.dp, Color.Black, RoundedCornerShape(4.dp))
-                                    .clickable(enabled = currentPage < totalPages) { currentPage++ },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(imageVector = Icons.Default.KeyboardArrowRight, contentDescription = "Next", modifier = Modifier.size(16.dp), tint = Color.Black)
                             }
                         }
                     }
@@ -841,7 +857,7 @@ fun ReportScreen(reportVM: ReportViewModel) {
 
 @Composable
 fun RevenueLineChart(transactions: List<ExportHelper.TransactionReportItem>) {
-    // Canvas drawn simple Line Chart representing transactions trend
+    // Canvas drawn simple Line Chart representing transactions trend - Tunai (Green), QRIS (Red)
     val cashPoints = remember(transactions) {
         val sorted = transactions.sortedBy { it.transaction.paymentDate }
         var currentSum = 0.0
@@ -864,62 +880,70 @@ fun RevenueLineChart(transactions: List<ExportHelper.TransactionReportItem>) {
         }
     }
 
-    Canvas(
+    // Scrollable container for the chart
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(130.dp)
-            .background(Color(0xFFF4F3EF), RoundedCornerShape(4.dp))
-            .border(2.dp, Color.Black, RoundedCornerShape(4.dp))
-            .padding(8.dp)
+            .horizontalScroll(rememberScrollState())
     ) {
-        val maxAmount = maxOf(
-            1.0,
-            cashPoints.lastOrNull() ?: 1.0,
-            qrisPoints.lastOrNull() ?: 1.0
-        )
+        val chartWidth = maxOf(340.dp, (transactions.size * 25).dp)
+        Canvas(
+            modifier = Modifier
+                .width(chartWidth)
+                .height(130.dp)
+                .background(Color(0xFFF4F3EF), RoundedCornerShape(4.dp))
+                .border(2.dp, Color.Black, RoundedCornerShape(4.dp))
+                .padding(8.dp)
+        ) {
+            val maxAmount = maxOf(
+                1.0,
+                cashPoints.lastOrNull() ?: 1.0,
+                qrisPoints.lastOrNull() ?: 1.0
+            )
 
-        // Draw grid baseline
-        drawLine(
-            color = Color.Black.copy(alpha = 0.2f),
-            start = androidx.compose.ui.geometry.Offset(0f, size.height),
-            end = androidx.compose.ui.geometry.Offset(size.width, size.height),
-            strokeWidth = 2f
-        )
+            // Draw grid baseline
+            drawLine(
+                color = Color.Black.copy(alpha = 0.2f),
+                start = androidx.compose.ui.geometry.Offset(0f, size.height),
+                end = androidx.compose.ui.geometry.Offset(size.width, size.height),
+                strokeWidth = 2f
+            )
 
-        // Draw Cash Line
-        if (cashPoints.isNotEmpty()) {
-            val path = Path()
-            val stepX = size.width / (cashPoints.size - 1).coerceAtLeast(1)
-            path.moveTo(0f, size.height - (cashPoints[0] / maxAmount * size.height).toFloat())
-            for (i in 1 until cashPoints.size) {
-                path.lineTo(
-                    i * stepX,
-                    size.height - (cashPoints[i] / maxAmount * size.height).toFloat()
+            // Draw Tunai Line (Cash) -> Green (Color(0xFF2E7D32) / 0xFF00F5D4)
+            if (cashPoints.isNotEmpty()) {
+                val path = Path()
+                val stepX = size.width / (cashPoints.size - 1).coerceAtLeast(1)
+                path.moveTo(0f, size.height - (cashPoints[0] / maxAmount * size.height).toFloat())
+                for (i in 1 until cashPoints.size) {
+                    path.lineTo(
+                        i * stepX,
+                        size.height - (cashPoints[i] / maxAmount * size.height).toFloat()
+                    )
+                }
+                drawPath(
+                    path = path,
+                    color = Color(0xFF2E7D32), // Green
+                    style = Stroke(width = 8f)
                 )
             }
-            drawPath(
-                path = path,
-                color = Color.Black,
-                style = Stroke(width = 8f)
-            )
-        }
 
-        // Draw QRIS Line
-        if (qrisPoints.isNotEmpty()) {
-            val path = Path()
-            val stepX = size.width / (qrisPoints.size - 1).coerceAtLeast(1)
-            path.moveTo(0f, size.height - (qrisPoints[0] / maxAmount * size.height).toFloat())
-            for (i in 1 until qrisPoints.size) {
-                path.lineTo(
-                    i * stepX,
-                    size.height - (qrisPoints[i] / maxAmount * size.height).toFloat()
+            // Draw QRIS Line -> Red (Color(0xFFFF595E))
+            if (qrisPoints.isNotEmpty()) {
+                val path = Path()
+                val stepX = size.width / (qrisPoints.size - 1).coerceAtLeast(1)
+                path.moveTo(0f, size.height - (qrisPoints[0] / maxAmount * size.height).toFloat())
+                for (i in 1 until qrisPoints.size) {
+                    path.lineTo(
+                        i * stepX,
+                        size.height - (qrisPoints[i] / maxAmount * size.height).toFloat()
+                    )
+                }
+                drawPath(
+                    path = path,
+                    color = Color(0xFFFF595E), // Red
+                    style = Stroke(width = 8f)
                 )
             }
-            drawPath(
-                path = path,
-                color = Color(0xFF00F5D4),
-                style = Stroke(width = 8f)
-            )
         }
     }
 }
