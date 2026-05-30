@@ -89,6 +89,10 @@ fun SettingsScreen(settingsVM: SettingsViewModel) {
     // Screen State: "MAIN", "STORE", "PRODUCTS", "QRIS", "CONFIG"
     var activeSubScreen by remember { mutableStateOf("MAIN") }
 
+    androidx.activity.compose.BackHandler(enabled = activeSubScreen != "MAIN") {
+        activeSubScreen = "MAIN"
+    }
+
     Scaffold(
         containerColor = Color(0xFFF4F3EF), // Vintage Paper Background
         topBar = {
@@ -505,115 +509,157 @@ fun ProductSettingsTab(
             Text(
                 text = "Katalog Barang",
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold
+                color = Color.Black,
+                fontWeight = FontWeight.Black
             )
             
-            Button(
-                onClick = {
-                    selectedProduct = null
-                    showEditDialog = true
-                },
-                shape = RoundedCornerShape(8.dp)
+            Box(
+                modifier = Modifier
+                    .padding(bottom = 3.dp, end = 3.dp)
+                    .clickable {
+                        selectedProduct = null
+                        showEditDialog = true
+                    }
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Tambah")
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("Tambah", style = MaterialTheme.typography.labelSmall)
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .offset(x = 3.dp, y = 3.dp)
+                        .background(Color.Black, RoundedCornerShape(4.dp))
+                )
+                Row(
+                    modifier = Modifier
+                        .background(Color(0xFFFFDE4D), RoundedCornerShape(4.dp))
+                        .border(2.dp, Color.Black, RoundedCornerShape(4.dp))
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Tambah", tint = Color.Black, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("TAMBAH", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Black)
+                }
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         // List of products inside database
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(products) { product ->
-                Row(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (product.isActive) Color.White else Color.White.copy(alpha = 0.5f))
-                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
-                        .padding(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                        .padding(bottom = 4.dp, end = 4.dp)
                 ) {
-                    // Product preview photo
-                    val imgReq = ImageRequest.Builder(context)
-                        .data(product.imagePath?.let { File(it) })
-                        .crossfade(true)
-                        .build()
-
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .offset(x = 4.dp, y = 4.dp)
+                            .background(Color.Black, RoundedCornerShape(8.dp))
+                    )
                     Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(if (product.isActive) Color.White else Color.White.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
+                            .border(2.5.dp, Color.Black, RoundedCornerShape(8.dp))
+                            .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        if (product.imagePath != null) {
-                            AsyncImage(
-                                model = imgReq,
-                                contentDescription = product.name,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .size(44.dp)
-                                    .clip(RoundedCornerShape(6.dp))
-                            )
-                        } else {
-                            Box(
-                                modifier = Modifier
-                                    .size(44.dp)
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(MaterialTheme.colorScheme.secondaryContainer),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(product.name.take(1).uppercase(), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                        // Product preview photo
+                        val imgReq = ImageRequest.Builder(context)
+                            .data(product.imagePath?.let { File(it) })
+                            .crossfade(true)
+                            .build()
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            if (product.imagePath != null) {
+                                AsyncImage(
+                                    model = imgReq,
+                                    contentDescription = product.name,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .border(1.5.dp, Color.Black, RoundedCornerShape(6.dp))
+                                )
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(Color(0xFFE8D5FF))
+                                        .border(1.5.dp, Color.Black, RoundedCornerShape(6.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        product.name.take(1).uppercase(),
+                                        fontWeight = FontWeight.Black,
+                                        color = Color.Black
+                                    )
+                                }
                             }
-                        }
 
-                        Spacer(modifier = Modifier.width(12.dp))
+                            Spacer(modifier = Modifier.width(12.dp))
 
-                        Column {
-                            Text(
-                                text = product.name,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                text = "Rp ${String.format(Locale.getDefault(), "%,.0f", product.price)}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            if (!product.isActive) {
+                            Column {
                                 Text(
-                                    text = "Dihapus (Soft Delete)",
+                                    text = product.name,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = Color.Black,
+                                    fontWeight = FontWeight.Black,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = "Rp ${String.format(Locale.getDefault(), "%,.0f", product.price)}",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.error,
+                                    color = Color.Black,
                                     fontWeight = FontWeight.Bold
                                 )
+                                if (!product.isActive) {
+                                    Text(
+                                        text = "Dihapus",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Color(0xFFFF595E),
+                                        fontWeight = FontWeight.Black
+                                    )
+                                }
                             }
                         }
-                    }
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        IconButton(
-                            onClick = {
-                                selectedProduct = product
-                                showEditDialog = true
-                            },
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Icon(Icons.Default.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-                        }
-
-                        if (product.isActive) {
-                            IconButton(
-                                onClick = { settingsVM.deleteProduct(product) },
-                                modifier = Modifier.size(36.dp)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .background(Color(0xFF00F5D4), RoundedCornerShape(4.dp))
+                                    .border(2.dp, Color.Black, RoundedCornerShape(4.dp))
+                                    .clickable {
+                                        selectedProduct = product
+                                        showEditDialog = true
+                                    },
+                                contentAlignment = Alignment.Center
                             ) {
-                                Icon(Icons.Default.Delete, contentDescription = "Hapus", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
+                                Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color.Black, modifier = Modifier.size(18.dp))
+                            }
+
+                            if (product.isActive) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .background(Color(0xFFFF595E), RoundedCornerShape(4.dp))
+                                        .border(2.dp, Color.Black, RoundedCornerShape(4.dp))
+                                        .clickable { settingsVM.deleteProduct(product) },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Hapus", tint = Color.Black, modifier = Modifier.size(18.dp))
+                                }
                             }
                         }
                     }
@@ -774,84 +820,121 @@ fun QrisSettingsTab(
             Text(
                 text = "Master QRIS Toko",
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold
+                color = Color.Black,
+                fontWeight = FontWeight.Black
             )
             
-            Button(
-                onClick = { showAddDialog = true },
-                shape = RoundedCornerShape(8.dp)
+            Box(
+                modifier = Modifier
+                    .padding(bottom = 3.dp, end = 3.dp)
+                    .clickable { showAddDialog = true }
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Tambah")
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("Tambah", style = MaterialTheme.typography.labelSmall)
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .offset(x = 3.dp, y = 3.dp)
+                        .background(Color.Black, RoundedCornerShape(4.dp))
+                )
+                Row(
+                    modifier = Modifier
+                        .background(Color(0xFF00F5D4), RoundedCornerShape(4.dp))
+                        .border(2.dp, Color.Black, RoundedCornerShape(4.dp))
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Tambah", tint = Color.Black, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("TAMBAH", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Black)
+                }
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(qrisConfigs) { qris ->
-                Row(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color.White)
-                        .border(
-                            width = if (qris.isDefault) 2.dp else 1.dp,
-                            color = if (qris.isDefault) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                        .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                        .padding(bottom = 4.dp, end = 4.dp)
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = qris.merchantName,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            if (qris.isDefault) {
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(4.dp))
-                                        .background(MaterialTheme.colorScheme.primaryContainer)
-                                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                                ) {
-                                    Text("DEFAULT", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.Bold)
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .offset(x = 4.dp, y = 4.dp)
+                            .background(Color.Black, RoundedCornerShape(8.dp))
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color.White, RoundedCornerShape(8.dp))
+                            .border(2.5.dp, Color.Black, RoundedCornerShape(8.dp))
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = qris.merchantName,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = Color.Black,
+                                    fontWeight = FontWeight.Black
+                                )
+                                if (qris.isDefault) {
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .background(Color(0xFFFFDE4D), RoundedCornerShape(4.dp))
+                                            .border(1.5.dp, Color.Black, RoundedCornerShape(4.dp))
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Text(
+                                            text = "UTAMA",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = Color.Black,
+                                            fontWeight = FontWeight.Black
+                                        )
+                                    }
                                 }
                             }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "String: " + if (qris.rawQrisString.length > 40) qris.rawQrisString.take(37) + "..." else qris.rawQrisString,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.Gray,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
-                        Text(
-                            text = "String: " + if (qris.rawQrisString.length > 40) qris.rawQrisString.take(37) + "..." else qris.rawQrisString,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.outline,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        if (!qris.isDefault) {
-                            IconButton(
-                                onClick = { settingsVM.setDefaultQris(qris.id) },
-                                modifier = Modifier.size(36.dp)
-                            ) {
-                                Icon(Icons.Default.Star, contentDescription = "Jadikan Utama", tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(20.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (!qris.isDefault) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .background(Color(0xFFFFDE4D), RoundedCornerShape(4.dp))
+                                        .border(2.dp, Color.Black, RoundedCornerShape(4.dp))
+                                        .clickable { settingsVM.setDefaultQris(qris.id) },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Default.Star, contentDescription = "Jadikan Utama", tint = Color.Black, modifier = Modifier.size(18.dp))
+                                }
                             }
-                        }
 
-                        IconButton(
-                            onClick = { settingsVM.deleteQris(qris) },
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Icon(Icons.Default.Delete, contentDescription = "Hapus", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .background(Color(0xFFFF595E), RoundedCornerShape(4.dp))
+                                    .border(2.dp, Color.Black, RoundedCornerShape(4.dp))
+                                    .clickable { settingsVM.deleteQris(qris) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.Delete, contentDescription = "Hapus", tint = Color.Black, modifier = Modifier.size(18.dp))
+                            }
                         }
                     }
                 }
@@ -1285,24 +1368,37 @@ fun ConfigSettingsTab(context: android.content.Context) {
         Text(
             text = "Preferensi & Backup",
             style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.Bold
+            color = Color.Black,
+            fontWeight = FontWeight.Black
         )
 
         // Switch style Printer config
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 6.dp, end = 6.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .offset(x = 6.dp, y = 6.dp)
+                    .background(Color.Black, RoundedCornerShape(8.dp))
+            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White, RoundedCornerShape(8.dp))
+                    .border(2.5.dp, Color.Black, RoundedCornerShape(8.dp))
+                    .padding(16.dp)
+            ) {
                 Row(
                      modifier = Modifier.fillMaxWidth(),
                      horizontalArrangement = Arrangement.SpaceBetween,
                      verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-                        Text("Printer Bluetooth Thermal", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-                        Text("Cetak struk fisik ESC/POS otomatis sehabis transaksi", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                        Text("Printer Bluetooth Thermal", style = MaterialTheme.typography.bodyMedium, color = Color.Black, fontWeight = FontWeight.Black)
+                        Text("Cetak struk fisik ESC/POS otomatis sehabis transaksi", style = MaterialTheme.typography.labelSmall, color = Color.DarkGray, fontWeight = FontWeight.Bold)
                     }
 
                     Box(
@@ -1310,7 +1406,8 @@ fun ConfigSettingsTab(context: android.content.Context) {
                             .width(52.dp)
                             .height(28.dp)
                             .clip(CircleShape)
-                            .background(if (isPrinterActive) Color(0xFF2E7D32) else Color.LightGray)
+                            .background(if (isPrinterActive) Color(0xFF00F5D4) else Color.LightGray)
+                            .border(2.dp, Color.Black, CircleShape)
                             .clickable {
                                 if (!isPrinterActive) {
                                     // Check permission first when turning ON
@@ -1339,9 +1436,10 @@ fun ConfigSettingsTab(context: android.content.Context) {
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(24.dp)
+                                .size(20.dp)
                                 .clip(CircleShape)
                                 .background(Color.White)
+                                .border(1.5.dp, Color.Black, CircleShape)
                         )
                     }
                 }
@@ -1359,16 +1457,16 @@ fun ConfigSettingsTab(context: android.content.Context) {
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
-                    HorizontalDivider(color = Color.LightGray.copy(alpha = 0.3f), thickness = 0.5.dp)
+                    HorizontalDivider(color = Color.Black, thickness = 2.dp)
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
-                        text = "Pilih Printer Bluetooth:",
+                        text = "PILIH PRINTER BLUETOOTH:",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline,
-                        fontWeight = FontWeight.Bold
+                        color = Color.Black,
+                        fontWeight = FontWeight.Black
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
                     val currentPrinterName = pairedPrinters.find { it.device.address == selectedPrinterAddress }?.device?.name
                         ?: if (selectedPrinterAddress.isNotEmpty()) "Printer Terputus ($selectedPrinterAddress)" else "Belum Memilih Printer (Tap Pilih)"
@@ -1376,9 +1474,8 @@ fun ConfigSettingsTab(context: android.content.Context) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
+                            .background(Color(0xFFF4F3EF), RoundedCornerShape(6.dp))
+                            .border(2.dp, Color.Black, RoundedCornerShape(6.dp))
                             .clickable { showPrinterDropdown = !showPrinterDropdown }
                             .padding(horizontal = 12.dp, vertical = 10.dp)
                     ) {
@@ -1390,32 +1487,32 @@ fun ConfigSettingsTab(context: android.content.Context) {
                             Text(
                                 text = currentPrinterName,
                                 style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black
                             )
                             Icon(
                                 imageVector = if (showPrinterDropdown) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                                 contentDescription = "Pilih Printer",
-                                tint = MaterialTheme.colorScheme.primary
+                                tint = Color.Black
                             )
                         }
                     }
 
                     if (showPrinterDropdown) {
-                        Card(
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(top = 4.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                                .padding(top = 8.dp)
+                                .background(Color.White, RoundedCornerShape(6.dp))
+                                .border(2.dp, Color.Black, RoundedCornerShape(6.dp))
                         ) {
                             Column(modifier = Modifier.padding(4.dp)) {
                                 if (pairedPrinters.isEmpty()) {
                                     Text(
                                         text = "Tidak ada printer Bluetooth dipasang. Hubungkan dulu di Pengaturan Bluetooth HP.",
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.error,
+                                        color = Color(0xFFFF595E),
+                                        fontWeight = FontWeight.Bold,
                                         modifier = Modifier.padding(8.dp)
                                     )
                                 } else {
@@ -1436,24 +1533,26 @@ fun ConfigSettingsTab(context: android.content.Context) {
                                                 Text(
                                                     text = printer.device.name ?: "Unknown Printer",
                                                     style = MaterialTheme.typography.bodyMedium,
-                                                    fontWeight = FontWeight.Bold
+                                                    color = Color.Black,
+                                                    fontWeight = FontWeight.Black
                                                 )
                                                 Text(
                                                     text = printer.device.address,
                                                     style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.outline
+                                                    color = Color.Gray,
+                                                    fontWeight = FontWeight.Bold
                                                 )
                                             }
                                             if (selectedPrinterAddress == printer.device.address) {
                                                 Icon(
                                                     imageVector = Icons.Default.Done,
                                                     contentDescription = "Terpilih",
-                                                    tint = MaterialTheme.colorScheme.primary,
-                                                    modifier = Modifier.size(16.dp)
+                                                    tint = Color.Black,
+                                                    modifier = Modifier.size(18.dp)
                                                 )
                                             }
                                         }
-                                        HorizontalDivider(color = Color.LightGray.copy(alpha = 0.3f), thickness = 0.5.dp)
+                                        HorizontalDivider(color = Color.Black.copy(alpha = 0.2f), thickness = 1.dp)
                                     }
                                 }
                             }
@@ -1462,76 +1561,122 @@ fun ConfigSettingsTab(context: android.content.Context) {
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    Button(
-                        onClick = {
-                            // Run Dummy Print Test
-                            try {
-                                val bluetoothPrinters = com.dantsu.escposprinter.connection.bluetooth.BluetoothPrintersConnections().list
-                                val bluetoothConnection = if (selectedPrinterAddress.isNotEmpty() && bluetoothPrinters != null) {
-                                    bluetoothPrinters.find { it.device.address == selectedPrinterAddress }
-                                        ?: com.dantsu.escposprinter.connection.bluetooth.BluetoothPrintersConnections.selectFirstPaired()
-                                } else {
-                                    com.dantsu.escposprinter.connection.bluetooth.BluetoothPrintersConnections.selectFirstPaired()
-                                }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 3.dp, end = 3.dp)
+                            .clickable {
+                                // Run Dummy Print Test
+                                try {
+                                    val bluetoothPrinters = com.dantsu.escposprinter.connection.bluetooth.BluetoothPrintersConnections().list
+                                    val bluetoothConnection = if (selectedPrinterAddress.isNotEmpty() && bluetoothPrinters != null) {
+                                        bluetoothPrinters.find { it.device.address == selectedPrinterAddress }
+                                            ?: com.dantsu.escposprinter.connection.bluetooth.BluetoothPrintersConnections.selectFirstPaired()
+                                    } else {
+                                        com.dantsu.escposprinter.connection.bluetooth.BluetoothPrintersConnections.selectFirstPaired()
+                                    }
 
-                                if (bluetoothConnection == null) {
-                                    Toast.makeText(context, "Printer Bluetooth tidak terhubung / terpasang!", Toast.LENGTH_LONG).show()
-                                } else {
-                                    val printer = com.dantsu.escposprinter.EscPosPrinter(bluetoothConnection, 203, 48f, 32)
-                                    val textToPrint = StringBuilder()
-                                    textToPrint.append("[C]<b><font size='big'>TEST PRINT DUMMY</font></b>\n")
-                                    textToPrint.append("[C]Printer Thermal Bluetooth Berhasil\n")
-                                    textToPrint.append("[C]================================\n")
-                                    textToPrint.append("[L]Tgl Test : ${java.text.SimpleDateFormat("dd MMM yyyy, HH:mm", java.util.Locale.getDefault()).format(java.util.Date())}\n")
-                                    textToPrint.append("[L]Printer  : ${bluetoothConnection.device.name ?: "Unknown"}\n")
-                                    textToPrint.append("[L]Alamat   : ${bluetoothConnection.device.address}\n")
-                                    textToPrint.append("[C]--------------------------------\n")
-                                    textToPrint.append("[C]Koneksi printer thermal berjalan!\n")
-                                    textToPrint.append("[C]POS KASIR QRIS OFFLINE\n\n\n")
+                                    if (bluetoothConnection == null) {
+                                        Toast.makeText(context, "Printer Bluetooth tidak terhubung / terpasang!", Toast.LENGTH_LONG).show()
+                                    } else {
+                                        val printer = com.dantsu.escposprinter.EscPosPrinter(bluetoothConnection, 203, 48f, 32)
+                                        val textToPrint = StringBuilder()
+                                        textToPrint.append("[C]<b><font size='big'>TEST PRINT DUMMY</font></b>\n")
+                                        textToPrint.append("[C]Printer Thermal Bluetooth Berhasil\n")
+                                        textToPrint.append("[C]================================\n")
+                                        textToPrint.append("[L]Tgl Test : ${java.text.SimpleDateFormat("dd MMM yyyy, HH:mm", java.util.Locale.getDefault()).format(java.util.Date())}\n")
+                                        textToPrint.append("[L]Printer  : ${bluetoothConnection.device.name ?: "Unknown"}\n")
+                                        textToPrint.append("[L]Alamat   : ${bluetoothConnection.device.address}\n")
+                                        textToPrint.append("[C]--------------------------------\n")
+                                        textToPrint.append("[C]Koneksi printer thermal berjalan!\n")
+                                        textToPrint.append("[C]POS KASIR QRIS OFFLINE\n\n\n")
 
-                                    printer.printFormattedText(textToPrint.toString())
-                                    Toast.makeText(context, "Test print berhasil dikirim ke printer!", Toast.LENGTH_SHORT).show()
+                                        printer.printFormattedText(textToPrint.toString())
+                                        Toast.makeText(context, "Test print berhasil dikirim ke printer!", Toast.LENGTH_SHORT).show()
+                                    }
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                    Toast.makeText(context, "Gagal print: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
                                 }
-                            } catch (e: Exception) {
-                                e.printStackTrace()
-                                Toast.makeText(context, "Gagal print: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
                             }
-                        },
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(imageVector = Icons.Default.Refresh, contentDescription = "Test Print")
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("TEST PRINT STRUK (DUMMY)", style = MaterialTheme.typography.labelMedium)
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .offset(x = 3.dp, y = 3.dp)
+                                .background(Color.Black, RoundedCornerShape(4.dp))
+                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color(0xFFFFDE4D), RoundedCornerShape(4.dp))
+                                .border(2.dp, Color.Black, RoundedCornerShape(4.dp))
+                                .padding(vertical = 10.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(imageVector = Icons.Default.Refresh, contentDescription = "Test Print", tint = Color.Black, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("TEST PRINT STRUK (DUMMY)", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Black)
+                        }
                     }
                 }
             }
         }
 
         // SQLite DB Backup info card
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 6.dp, end = 6.dp)
         ) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .offset(x = 6.dp, y = 6.dp)
+                    .background(Color.Black, RoundedCornerShape(8.dp))
+            )
             Column(
-                modifier = Modifier.padding(16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White, RoundedCornerShape(8.dp))
+                    .border(2.5.dp, Color.Black, RoundedCornerShape(8.dp))
+                    .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text("Ekspor / Backup Database Room", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                Text("Ekspor / Backup Database Room", style = MaterialTheme.typography.bodyMedium, color = Color.Black, fontWeight = FontWeight.Black)
                 Text(
                     text = "Aplikasi kasir ini berjalan 100% offline. Semua database disimpan secara internal di perangkat Anda. Disarankan untuk membackup database secara berkala ke folder eksternal.",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline
+                    color = Color.DarkGray,
+                    fontWeight = FontWeight.Bold
                 )
 
-                Button(
-                    onClick = {
-                        Toast.makeText(context, "Fitur Auto-Backup Sukses Dijalankan ke internal sandbox!", Toast.LENGTH_LONG).show()
-                    },
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth()
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 3.dp, end = 3.dp)
+                        .clickable {
+                            Toast.makeText(context, "Fitur Auto-Backup Sukses Dijalankan ke internal sandbox!", Toast.LENGTH_LONG).show()
+                        }
                 ) {
-                    Text("Cadangkan Database Sekarang", style = MaterialTheme.typography.labelMedium)
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .offset(x = 3.dp, y = 3.dp)
+                            .background(Color.Black, RoundedCornerShape(4.dp))
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xFFE8D5FF), RoundedCornerShape(4.dp))
+                            .border(2.dp, Color.Black, RoundedCornerShape(4.dp))
+                            .padding(vertical = 10.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("CADANGKAN DATABASE SEKARANG", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Black)
+                    }
                 }
             }
         }

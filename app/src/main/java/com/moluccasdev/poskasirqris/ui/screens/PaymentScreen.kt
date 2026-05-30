@@ -1426,10 +1426,7 @@ fun printReceipt(
                     val height = (originalBitmap.height * (width.toDouble() / originalBitmap.width)).toInt()
                     val resizedBitmap = android.graphics.Bitmap.createScaledBitmap(originalBitmap, width, height, true)
                     
-                    printer.printFormattedTextAndCut("") // flush any buffer
-                    printer.printFormattedText(
-                        "[C]<img>" + com.dantsu.escposprinter.textparser.PrinterTextParserImg.bitmapToHexadecimalString(printer, resizedBitmap) + "</img>\n"
-                    )
+                    textToPrint.append("[C]<img>" + com.dantsu.escposprinter.textparser.PrinterTextParserImg.bitmapToHexadecimalString(printer, resizedBitmap) + "</img>\n")
                     logoPrinted = true
                 }
             } catch (e: Exception) {
@@ -1468,7 +1465,14 @@ fun printReceipt(
         textToPrint.append("[C]================================\n")
         textToPrint.append("[C]Terima Kasih atas\n")
         textToPrint.append("[C]Kunjungan Anda!\n")
-        textToPrint.append("[C]$storeFooter\n\n\n")
+        
+        // Multi-line center footer
+        storeFooter.split("\n").forEach { line ->
+            if (line.trim().isNotEmpty()) {
+                textToPrint.append("[C]${line.trim()}\n")
+            }
+        }
+        textToPrint.append("\n\n\n")
 
         printer.printFormattedText(textToPrint.toString())
     } catch (e: Exception) {
