@@ -339,12 +339,18 @@ fun ReportScreen(reportVM: ReportViewModel) {
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             
-                            Row(
+                            Column(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                Text("Tunai: Rp ${String.format(Locale.getDefault(), "%,.0f", cashRevenue)} (${100 - (qrisPercentage * 100).toInt()}%)", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Black)
-                                Text("QRIS: Rp ${String.format(Locale.getDefault(), "%,.0f", qrisRevenue)} (${(qrisPercentage * 100).toInt()}%)", style = MaterialTheme.typography.labelSmall, color = Color(0xFF00F5D4), fontWeight = FontWeight.Black)
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("- ", color = Color(0xFF2E7D32), fontWeight = FontWeight.Black, style = MaterialTheme.typography.titleLarge)
+                                    Text("Tunai: Rp ${String.format(Locale.getDefault(), "%,.0f", cashRevenue)} (${100 - (qrisPercentage * 100).toInt()}%)", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Black)
+                                }
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("- ", color = Color(0xFFFF595E), fontWeight = FontWeight.Black, style = MaterialTheme.typography.titleLarge)
+                                    Text("QRIS: Rp ${String.format(Locale.getDefault(), "%,.0f", qrisRevenue)} (${(qrisPercentage * 100).toInt()}%)", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Black)
+                                }
                             }
                             
                             Spacer(modifier = Modifier.height(12.dp))
@@ -687,12 +693,18 @@ fun ReportScreen(reportVM: ReportViewModel) {
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                             
-                            Row(
+                            Column(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                Text("Tunai: Rp ${String.format(Locale.getDefault(), "%,.0f", cashRevenue)} (${100 - (qrisPercentage * 100).toInt()}%)", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Black)
-                                Text("QRIS: Rp ${String.format(Locale.getDefault(), "%,.0f", qrisRevenue)} (${(qrisPercentage * 100).toInt()}%)", style = MaterialTheme.typography.labelSmall, color = Color(0xFF00F5D4), fontWeight = FontWeight.Black)
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("- ", color = Color(0xFF2E7D32), fontWeight = FontWeight.Black, style = MaterialTheme.typography.titleLarge)
+                                    Text("Tunai: Rp ${String.format(Locale.getDefault(), "%,.0f", cashRevenue)} (${100 - (qrisPercentage * 100).toInt()}%)", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Black)
+                                }
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("- ", color = Color(0xFFFF595E), fontWeight = FontWeight.Black, style = MaterialTheme.typography.titleLarge)
+                                    Text("QRIS: Rp ${String.format(Locale.getDefault(), "%,.0f", qrisRevenue)} (${(qrisPercentage * 100).toInt()}%)", style = MaterialTheme.typography.labelSmall, color = Color.Black, fontWeight = FontWeight.Black)
+                                }
                             }
                             
                             Spacer(modifier = Modifier.height(12.dp))
